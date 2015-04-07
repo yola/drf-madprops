@@ -8,6 +8,7 @@ class TestSerializer(PropertiesSerializer):
     class Meta:
         model = TestPreference
         parent_obj_name = 'user'
+        read_only_props = ('user_token',)
 
 
 class FieldToRepresentation(SerializerTestCase):
@@ -121,4 +122,21 @@ class ErrorsForMultipleObjectsCreate(SerializerTestCase):
         self.assertEqual(
             sorted(self.serializer.object),
             sorted([TestPreference('a', 'b', 4), TestPreference('c', 'd', 4)])
+        )
+
+
+class ErrorsForReadOnlyProperties(SerializerTestCase):
+    def setUp(self):
+        self.serializer = TestSerializer(
+            data={'a': 'b', 'user_token': 'new_value'},
+            many=True,
+            context={'view': Mock(kwargs={'user_id': 4})}
+        )
+        self.patch_from_native()
+        self.serializer.errors
+
+    def test_skips_readonly_prpertieso(self):
+        self.assertEqual(
+            self.serializer.object,
+            [TestPreference('a', 'b', 4)]
         )

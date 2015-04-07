@@ -8,6 +8,7 @@ class PropertiesSerializerOptions(ModelSerializerOptions):
     def __init__(self, meta):
         super(PropertiesSerializerOptions, self).__init__(meta)
         self.parent_obj_name = getattr(meta, 'parent_obj_name', None)
+        self.read_only_props = getattr(meta, 'read_only_props', [])
         self.exclude = ('id',)
 
 
@@ -42,6 +43,10 @@ class PropertiesSerializer(ModelSerializer):
     def errors(self):
         if not isinstance(self.init_data, dict):
             return {'non_field_errors': ['Expected a dictionary.']}
+
+        # Remove read-only properties
+        for prop in self.opts.read_only_props:
+            self.init_data.pop(prop, None)
 
         if self.object:
             return self._update()
