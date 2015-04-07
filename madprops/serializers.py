@@ -8,7 +8,13 @@ class PropertiesSerializerOptions(ModelSerializerOptions):
     def __init__(self, meta):
         super(PropertiesSerializerOptions, self).__init__(meta)
         self.parent_obj_name = getattr(meta, 'parent_obj_name', None)
+        self.exclude = ('id',)
 
+
+class NestedPropertiesSerializerOptions(PropertiesSerializerOptions):
+    """Meta class options for NestedPropertiesSerializer"""
+    def __init__(self, meta):
+        super(NestedPropertiesSerializerOptions, self).__init__(meta)
         self.exclude = ('id', self.parent_obj_name)
 
 
@@ -35,7 +41,7 @@ class PropertiesSerializer(ModelSerializer):
     @cached_property
     def errors(self):
         if not isinstance(self.init_data, dict):
-            return {'non_field_errors': ['Expected an object.']}
+            return {'non_field_errors': ['Expected a dictionary.']}
 
         if self.object:
             return self._update()
@@ -73,17 +79,13 @@ class PropertiesSerializer(ModelSerializer):
         self.object = result
 
     def from_native(self, data, files=None):
-        name, value = data.popitem()
-        data = {
-            'name': name,
-            'value': value
-        }
+        name, value = data.iteritems().next()
+        data = {'name': name, 'value': value}
 
         # Update created property with reference to parent object
         parent_obj_name = self.opts.parent_obj_name
         parent_id_name = parent_obj_name + '_id'
-        if parent_id_name in self.context['view'].kwargs:
-            data[parent_obj_name] = self.context['view'].kwargs[parent_id_name]
+        data[parent_obj_name] = self.context['view'].kwargs[parent_id_name]
 
         return super(PropertiesSerializer, self).from_native(data, files)
 
@@ -103,3 +105,12 @@ class PropertiesSerializer(ModelSerializer):
         }
         if not model.objects.filter(**filters).update(value=obj.value):
             obj.save(**kwargs)
+
+
+class NestedPropertiesSerializer(PropertiesSerializer):
+    _options_class = PropertiesSerializerOptions
+
+    def from_native(self, data, files=None):
+        name, value = data.iteritems().next()
+        return super(PropertiesSerializer, self).from_native(
+            {'name': name, 'value': value}, files)
