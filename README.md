@@ -63,7 +63,7 @@ from madprops.serializers import NestedPropertiesSerializer
 class PreferenceSerializer(NestedPropertiesSerializer):
     class Meta:
         model = Preference
-        parent_obj_name = 'user'
+        parent_obj_field = 'user'
         read_only_props = ('user_token', 'tutorial_email_sent')
 
 
@@ -79,7 +79,7 @@ from madprops.serializers import PropertiesSerializer
 class PreferenceSerializer(PropertiesSerializer):
     class Meta:
         model = Preference
-        parent_obj_name = 'user'
+        parent_obj_field = 'user'
         read_only_props = ('user_token', 'tutorial_email_sent')
 
 
