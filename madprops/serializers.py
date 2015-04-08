@@ -1,3 +1,5 @@
+from collections import Iterable
+
 from django.utils.functional import cached_property
 from rest_framework.serializers import (
     ModelSerializer, ModelSerializerOptions, RelationsList)
@@ -7,7 +9,7 @@ class PropertiesSerializerOptions(ModelSerializerOptions):
     """Meta class options for PropertiesSerializer"""
     def __init__(self, meta):
         super(PropertiesSerializerOptions, self).__init__(meta)
-        self.parent_obj_name = getattr(meta, 'parent_obj_name', None)
+        self.parent_obj_field = getattr(meta, 'parent_obj_field', None)
         self.read_only_props = getattr(meta, 'read_only_props', [])
         self.exclude = ('id',)
 
@@ -16,7 +18,7 @@ class NestedPropertiesSerializerOptions(PropertiesSerializerOptions):
     """Meta class options for NestedPropertiesSerializer"""
     def __init__(self, meta):
         super(NestedPropertiesSerializerOptions, self).__init__(meta)
-        self.exclude = ('id', self.parent_obj_name)
+        self.exclude = ('id', self.parent_obj_field)
 
 
 class PropertiesSerializer(ModelSerializer):
@@ -48,7 +50,14 @@ class PropertiesSerializer(ModelSerializer):
     _options_class = PropertiesSerializerOptions
 
     def field_to_native(self, obj, field_name):
-        return dict((p.name, p.value) for p in getattr(obj, field_name).all())
+        return self._to_representation(getattr(obj, field_name).all())
+
+    @cached_property
+    def data(self):
+        return self._to_representation(self.objects)
+
+    def _to_representation(self, objects):
+        return dict((obj.name, obj.value) for obj in objects)
 
     @cached_property
     def errors(self):
@@ -64,24 +73,14 @@ class PropertiesSerializer(ModelSerializer):
 
         return self._create()
 
-    def _update(self):
-        if self.many:
-            return self._update_many()
-
-        if 'value' in self.init_data:
-            self.object.value = self.init_data['value']
-
     def _create(self):
-        if self.many:
-            self.object = RelationsList(
-                self.from_native({k: v}) for k, v in self.init_data.iteritems()
-            )
-        else:
-            self.object = self.from_native(self.init_data)
+        self.object = RelationsList(
+            self.from_native({k: v}) for k, v in self.init_data.iteritems()
+        )
 
-    def _update_many(self):
+    def _update(self):
         result = RelationsList()
-        existent_props = dict((obj.name, obj) for obj in self.object)
+        existent_props = dict((obj.name, obj) for obj in self.objects)
         # Set object to None, because it's used in other methods and
         # might break them.
         self.object = None
@@ -99,24 +98,25 @@ class PropertiesSerializer(ModelSerializer):
         data = {'name': name, 'value': value}
 
         # Update created property with reference to parent object
-        parent_obj_name = self.opts.parent_obj_name
-        parent_id_name = parent_obj_name + '_id'
-        data[parent_obj_name] = self.context['view'].kwargs[parent_id_name]
+        parent_obj_field = self.opts.parent_obj_field
+        parent_id_field = parent_obj_field + '_id'
+        data[parent_obj_field] = self.context['view'].kwargs[parent_id_field]
 
         return super(PropertiesSerializer, self).from_native(data, files)
 
-    @cached_property
-    def data(self):
-        if self.many:
-            return dict((pref.name, pref.value) for pref in self.object)
-        return {'value': self.object.value}
+    @property
+    def objects(self):
+        # Ensure we always work with iterable
+        if isinstance(self.object, Iterable):
+            return self.object
+        return [self.object]
 
     def save_object(self, obj, **kwargs):
         # Ensure we have only one property with the same name
         model = self.opts.model
-        parent_obj_name = self.opts.parent_obj_name
+        parent_obj_field = self.opts.parent_obj_field
         filters = {
-            parent_obj_name: getattr(obj, parent_obj_name),
+            parent_obj_field: getattr(obj, parent_obj_field),
             'name': obj.name
         }
         if not model.objects.filter(**filters).update(value=obj.value):

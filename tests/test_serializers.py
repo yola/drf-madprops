@@ -7,11 +7,11 @@ from madprops.serializers import PropertiesSerializer
 class TestSerializer(PropertiesSerializer):
     class Meta:
         model = TestPreference
-        parent_obj_name = 'user'
+        parent_obj_field = 'user'
         read_only_props = ('user_token',)
 
 
-class FieldToRepresentation(SerializerTestCase):
+class FieldToNative(SerializerTestCase):
     def setUp(self):
         self.preferences = {'k1': 'v1', 'k2': 'v2'}
         user = TestUser()
@@ -23,7 +23,7 @@ class FieldToRepresentation(SerializerTestCase):
         self.assertEqual(self.preferences, self.representation)
 
 
-class PropertyToInternalValue(SerializerTestCase):
+class FromNative(SerializerTestCase):
     def setUp(self):
         data = {'k1': 'v1'}
         context = {'view': Mock(kwargs={'user_id': 4})}
@@ -35,15 +35,7 @@ class PropertyToInternalValue(SerializerTestCase):
         self.assertEqual(self.preference, TestPreference('k1', 'v1', 4))
 
 
-class DataForSingleObject(SerializerTestCase):
-    def setUp(self):
-        self.serializer = TestSerializer(instance=TestPreference('a', 'b'))
-
-    def test_converts_property_to_dict(self):
-        self.assertEqual(self.serializer.data, {'value': 'b'})
-
-
-class DataForMultipleObjects(SerializerTestCase):
+class Data(SerializerTestCase):
     def setUp(self):
         serializer = TestSerializer(
             many=True, instance=(
@@ -65,7 +57,7 @@ class ErrorsWhenDataIsNotDict(SerializerTestCase):
         )
 
 
-class ErrorsForMultipleObjectsUpdate(SerializerTestCase):
+class ErrorsForObjectsUpdate(SerializerTestCase):
     def setUp(self):
         self.serializer = TestSerializer(
             data={'a': 'b', 'c': 'd'},
@@ -83,32 +75,7 @@ class ErrorsForMultipleObjectsUpdate(SerializerTestCase):
         )
 
 
-class ErrorsForSingleObjectUpdate(SerializerTestCase):
-    def setUp(self):
-        self.serializer = TestSerializer(
-            data={'value': 'aaa'},
-            instance=TestPreference('a', 'b'),
-        )
-        self.serializer.errors
-
-    def test_updates_properties(self):
-        self.assertEqual(self.serializer.object, TestPreference('a', 'aaa'))
-
-
-class ErrorsForSingleObjectCreate(SerializerTestCase):
-    def setUp(self):
-        self.serializer = TestSerializer(
-            data={'a': 'b'},
-            context={'view': Mock(kwargs={'user_id': 4})}
-        )
-        self.patch_from_native()
-        self.serializer.errors
-
-    def test_updates_properties(self):
-        self.assertEqual(self.serializer.object, TestPreference('a', 'b', 4))
-
-
-class ErrorsForMultipleObjectsCreate(SerializerTestCase):
+class ErrorsForObjectsCreate(SerializerTestCase):
     def setUp(self):
         self.serializer = TestSerializer(
             data={'a': 'b', 'c': 'd'},
