@@ -45,6 +45,15 @@ instead of representation listed above, we'll get something like:
 
 ## Usage
 
+### Additional meta options
+
+- `parent_obj_field`: field name in your `Property` model which contains
+  reference to parent object. For `PropertiesSerializer` it's also used to
+  calculate view params containing parent object id.
+
+- `read_only_props`: list of property names, which values cannot be changed
+  via serializer.
+
 ### As a nested serializer
 
 ```python

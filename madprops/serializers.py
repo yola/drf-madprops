@@ -34,17 +34,17 @@ class PropertiesSerializer(ModelSerializer):
         name = CharField()
         value = CharField()
 
-    to representation (converts Property instance(s) to dictionary):
-        many instances -> {obj1.name: obj1.value, obj2.name: obj2.value, ...}
-        single instance -> {'value': obj.value}
+    After converting collection of properties to representation we'll get the
+    following dict:
 
-    to internal object(s) (converts input dictionary into Property instance(s)
-        {name: value} -> Property(name=name, value=value)
-        {name1: value1, name2: value2 ...} -> [
-            Property(name=name1, value=value1),
-            Property(name=name2, value=value2),
-            ...
-        ]
+    {
+        prop1.name: prop1.value,
+        prop2.name: prop2.value,
+        ....
+    }
+
+    And an input dictionary of the above structure will be converted to
+    the collection of Property instances
     """
 
     _options_class = PropertiesSerializerOptions
