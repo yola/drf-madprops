@@ -4,8 +4,14 @@ from unittest2 import TestCase
 
 settings.configure()
 
+# Need to import this after configure()
+from django.db.models import ForeignKey
+
 
 class TestPreference(object):
+
+    _meta = Mock(fields=[ForeignKey('user', name='user')])
+
     def __init__(self, name, value, user=None):
         self.name = name
         self.value = value

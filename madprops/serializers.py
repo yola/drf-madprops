@@ -1,5 +1,6 @@
 from collections import Iterable
 
+from django.db.models import ForeignKey
 from django.utils.functional import cached_property
 from rest_framework.serializers import (
     ModelSerializer, ModelSerializerOptions, RelationsList)
@@ -9,8 +10,17 @@ class PropertiesSerializerOptions(ModelSerializerOptions):
     """Meta class options for PropertiesSerializer"""
     def __init__(self, meta):
         super(PropertiesSerializerOptions, self).__init__(meta)
-        self.parent_obj_field = getattr(meta, 'parent_obj_field', None)
         self.read_only_props = getattr(meta, 'read_only_props', [])
+
+        # Automagically get the name of field containing relation to parent
+        for field in self.model._meta.fields:
+            if isinstance(field, ForeignKey):
+                self.parent_obj_field = field.name
+                break
+        else:
+            raise ValueError(
+                '{0} misses relation to parent model'.format(self.model))
+
         self.exclude = ('id',)
 
 

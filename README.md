@@ -47,10 +47,6 @@ instead of representation listed above, we'll get something like:
 
 ### Additional meta options
 
-- `parent_obj_field`: field name in your `Property` model which contains
-  reference to parent object. For `PropertiesSerializer` it's also used to
-  calculate view params containing parent object id.
-
 - `read_only_props`: list of property names, which values cannot be changed
   via serializer.
 
@@ -63,7 +59,6 @@ from madprops.serializers import NestedPropertiesSerializer
 class PreferenceSerializer(NestedPropertiesSerializer):
     class Meta:
         model = Preference
-        parent_obj_field = 'user'
         read_only_props = ('user_token', 'tutorial_email_sent')
 
 
@@ -79,7 +74,6 @@ from madprops.serializers import PropertiesSerializer
 class PreferenceSerializer(PropertiesSerializer):
     class Meta:
         model = Preference
-        parent_obj_field = 'user'
         read_only_props = ('user_token', 'tutorial_email_sent')
 
 
