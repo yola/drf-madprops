@@ -11,17 +11,17 @@ class PropertiesSerializerOptions(ModelSerializerOptions):
     def __init__(self, meta):
         super(PropertiesSerializerOptions, self).__init__(meta)
         self.read_only_props = getattr(meta, 'read_only_props', [])
+        self.exclude = ('id',)
 
+    @cached_property
+    def parent_obj_field(self):
         # Automagically get the name of field containing relation to parent
         for field in self.model._meta.fields:
             if isinstance(field, ForeignKey):
-                self.parent_obj_field = field.name
-                break
-        else:
-            raise ValueError(
-                '{0} misses relation to parent model'.format(self.model))
+                return field.name
 
-        self.exclude = ('id',)
+        raise ValueError(
+            '{0} misses relation to parent model'.format(self.model))
 
 
 class NestedPropertiesSerializerOptions(PropertiesSerializerOptions):
