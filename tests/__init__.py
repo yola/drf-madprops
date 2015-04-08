@@ -2,9 +2,7 @@ from django.conf import settings
 from mock import Mock, patch
 from unittest2 import TestCase
 
-settings.configure(
-    DEFAULT_INDEX_TABLESPACE='',
-)
+settings.configure()
 
 
 class TestPreference(object):
