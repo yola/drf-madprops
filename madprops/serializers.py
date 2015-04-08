@@ -28,7 +28,6 @@ class PropertiesSerializer(ModelSerializer):
     We consider Property as a model of the following structure:
 
     class Property(model):
-        id = AutoField()
         parent_model: ForeignKey(...)
         name = CharField()
         value = CharField()
