@@ -1,6 +1,6 @@
 # drf-madprops
 
-DRF library of helpers to operate lists of resources' properties as dicts
+DRF library of helpers to operate on lists of resource properties as dicts
 
 Written and used by the folks at Yola to support our [free website builder][1].
 
@@ -19,7 +19,7 @@ class UserPreference(models.Model):
     value = models.CharField)
 ```
 
-But it's not very convenient to expose/operate them via standard DRF
+But it's not very convenient to expose/operate on them via standard DRF
 serializers.  We'll get something like:
 
 ```json
@@ -32,7 +32,7 @@ serializers.  We'll get something like:
 
 This library contains two base classes for property's serializers (for cases
 when properties are exposed as separate resource and as nested resource) which
-allows to retrieve/operate parent resource properties as dicts. For example,
+allows to retrieve/operate on parent resource properties as dicts. For example,
 instead of representation listed above, we'll get something like:
 
 ```json

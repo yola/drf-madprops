@@ -20,18 +20,31 @@ class NestedPropertiesSerializerOptions(PropertiesSerializerOptions):
 
 
 class PropertiesSerializer(ModelSerializer):
-    """Allows to operate properties of certain resource as dictionary
+    """Allows to operate on properties of certain resource as dictionary
 
     Intended to be used as a base class for serializer for property resource
     exposed via separate endpoint.
 
-    to representation:
-        many objects -> {obj1.name: obj1.value, obj2.name: obj2.value ...}
-        object -> {'value': obj.value}
+    We consider Property as a model of the following structure:
 
-    to internal value:
-        {name: value} -> obj.name = name, obj.value = value
-        {name1: value1, name2: value2 ...} -> obj1, obj2 ...
+    class Property(model):
+        id = AutoField()
+        parent_model: ForeignKey(...)
+        name = CharField()
+        value = CharField()
+        id = models.AutoField()
+
+    to representation (converts Property instance(s) to dictionary):
+        many instances -> {obj1.name: obj1.value, obj2.name: obj2.value, ...}
+        single instance -> {'value': obj.value}
+
+    to internal object(s) (converts input dictionary into Property instance(s)
+        {name: value} -> Property(name=name, value=value)
+        {name1: value1, name2: value2 ...} -> [
+            Property(name=name1, value=value1),
+            Property(name=name2, value=value2),
+            ...
+        ]
     """
 
     _options_class = PropertiesSerializerOptions
@@ -44,7 +57,7 @@ class PropertiesSerializer(ModelSerializer):
         if not isinstance(self.init_data, dict):
             return {'non_field_errors': ['Expected a dictionary.']}
 
-        # Remove read-only properties
+        # Ensure we don't modify read-only properties.  Remove them from input.
         for prop in self.opts.read_only_props:
             self.init_data.pop(prop, None)
 
