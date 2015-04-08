@@ -22,8 +22,8 @@ class NestedPropertiesSerializerOptions(PropertiesSerializerOptions):
 class PropertiesSerializer(ModelSerializer):
     """Allows to operate properties of certain resource as dictionary
 
-    Can be used both as nested serializer and serializer for separate
-    properties endpoint
+    Intended to be used as a base class for serializer for property resource
+    exposed via separate endpoint.
 
     to representation:
         many objects -> {obj1.name: obj1.value, obj2.name: obj2.value ...}
@@ -113,6 +113,12 @@ class PropertiesSerializer(ModelSerializer):
 
 
 class NestedPropertiesSerializer(PropertiesSerializer):
+    """Version of PropertiesSerializer for nested resources
+
+    Intended to be used as a base class for serializer for property resource
+    exposed as a nested resource.
+    """
+
     _options_class = PropertiesSerializerOptions
 
     def from_native(self, data, files=None):
