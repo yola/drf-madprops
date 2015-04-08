@@ -32,7 +32,6 @@ class PropertiesSerializer(ModelSerializer):
         parent_model: ForeignKey(...)
         name = CharField()
         value = CharField()
-        id = models.AutoField()
 
     to representation (converts Property instance(s) to dictionary):
         many instances -> {obj1.name: obj1.value, obj2.name: obj2.value, ...}
