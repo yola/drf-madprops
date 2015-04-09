@@ -142,6 +142,10 @@ class NestedPropertySerializer(PropertySerializer):
 
     _options_class = NestedPropertySerializerOptions
 
+    def __init__(self, **kwargs):
+        super(NestedPropertySerializer, self).__init__(**kwargs)
+        self.many = True
+
     def from_native(self, data, files=None):
         name, value = data.iteritems().next()
         return super(PropertySerializer, self).from_native(
