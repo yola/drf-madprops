@@ -1,10 +1,10 @@
 from mock import Mock
 
 from tests import SerializerTestCase, TestPreference, TestUser
-from madprops.serializers import PropertiesSerializer
+from madprops.serializers import PropertySerializer
 
 
-class TestSerializer(PropertiesSerializer):
+class TestSerializer(PropertySerializer):
     class Meta:
         model = TestPreference
         read_only_props = ('user_token',)

@@ -6,10 +6,10 @@ from rest_framework.serializers import (
     ModelSerializer, ModelSerializerOptions, RelationsList)
 
 
-class PropertiesSerializerOptions(ModelSerializerOptions):
-    """Meta class options for PropertiesSerializer"""
+class PropertySerializerOptions(ModelSerializerOptions):
+    """Meta class options for PropertySerializer"""
     def __init__(self, meta):
-        super(PropertiesSerializerOptions, self).__init__(meta)
+        super(PropertySerializerOptions, self).__init__(meta)
         self.read_only_props = getattr(meta, 'read_only_props', [])
         self.exclude = ('id',)
 
@@ -24,14 +24,14 @@ class PropertiesSerializerOptions(ModelSerializerOptions):
             '{0} misses relation to parent model'.format(self.model))
 
 
-class NestedPropertiesSerializerOptions(PropertiesSerializerOptions):
-    """Meta class options for NestedPropertiesSerializer"""
+class NestedPropertySerializerOptions(PropertySerializerOptions):
+    """Meta class options for NestedPropertySerializer"""
     def __init__(self, meta):
-        super(NestedPropertiesSerializerOptions, self).__init__(meta)
+        super(NestedPropertySerializerOptions, self).__init__(meta)
         self.exclude = ('id', self.parent_obj_field)
 
 
-class PropertiesSerializer(ModelSerializer):
+class PropertySerializer(ModelSerializer):
     """Allows to operate on properties of certain resource as dictionary
 
     Intended to be used as a base class for serializer for property resource
@@ -57,7 +57,7 @@ class PropertiesSerializer(ModelSerializer):
     the collection of Property instances
     """
 
-    _options_class = PropertiesSerializerOptions
+    _options_class = PropertySerializerOptions
 
     def field_to_native(self, obj, field_name):
         return self._to_representation(getattr(obj, field_name).all())
@@ -112,7 +112,7 @@ class PropertiesSerializer(ModelSerializer):
         parent_id_field = parent_obj_field + '_id'
         data[parent_obj_field] = self.context['view'].kwargs[parent_id_field]
 
-        return super(PropertiesSerializer, self).from_native(data, files)
+        return super(PropertySerializer, self).from_native(data, files)
 
     @property
     def objects(self):
@@ -133,16 +133,16 @@ class PropertiesSerializer(ModelSerializer):
             obj.save(**kwargs)
 
 
-class NestedPropertiesSerializer(PropertiesSerializer):
-    """Version of PropertiesSerializer for nested resources
+class NestedPropertySerializer(PropertySerializer):
+    """Version of PropertySerializer for nested resources
 
     Intended to be used as a base class for serializer for property resource
     exposed as a nested resource.
     """
 
-    _options_class = NestedPropertiesSerializerOptions
+    _options_class = NestedPropertySerializerOptions
 
     def from_native(self, data, files=None):
         name, value = data.iteritems().next()
-        return super(PropertiesSerializer, self).from_native(
+        return super(PropertySerializer, self).from_native(
             {'name': name, 'value': value}, files)
