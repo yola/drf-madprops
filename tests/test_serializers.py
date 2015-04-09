@@ -7,7 +7,6 @@ from madprops.serializers import PropertiesSerializer
 class TestSerializer(PropertiesSerializer):
     class Meta:
         model = TestPreference
-        parent_obj_field = 'user'
         read_only_props = ('user_token',)
 
 
