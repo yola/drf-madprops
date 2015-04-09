@@ -140,7 +140,7 @@ class NestedPropertiesSerializer(PropertiesSerializer):
     exposed as a nested resource.
     """
 
-    _options_class = PropertiesSerializerOptions
+    _options_class = NestedPropertiesSerializerOptions
 
     def from_native(self, data, files=None):
         name, value = data.iteritems().next()
