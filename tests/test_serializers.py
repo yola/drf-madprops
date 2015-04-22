@@ -22,6 +22,15 @@ class FieldToNative(SerializerTestCase):
         self.assertEqual(self.preferences, self.representation)
 
 
+class FieldToNativeWhenObjectIsNone(SerializerTestCase):
+    def setUp(self):
+        self.representation = TestSerializer().field_to_native(
+            None, 'preferences')
+
+    def test_returns_None(self):
+        self.assertIsNone(self.representation)
+
+
 class FromNative(SerializerTestCase):
     def setUp(self):
         data = {'k1': 'v1'}
@@ -43,6 +52,15 @@ class Data(SerializerTestCase):
 
     def test_converts_properties_to_dict(self):
         self.assertEqual(self.data, {'a': 'b', 'c': 'd'})
+
+
+class DataWhenObjectIsNone(SerializerTestCase):
+    def setUp(self):
+        serializer = TestSerializer(many=True)
+        self.data = serializer.data
+
+    def test_returns_None(self):
+        self.assertIsNone(self.data)
 
 
 class ErrorsWhenDataIsNotDict(SerializerTestCase):

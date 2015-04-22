@@ -60,10 +60,16 @@ class PropertySerializer(ModelSerializer):
     _options_class = PropertySerializerOptions
 
     def field_to_native(self, obj, field_name):
+        if obj is None:
+            return None
+
         return self._to_representation(getattr(obj, field_name).all())
 
     @cached_property
     def data(self):
+        if self.object is None:
+            return None
+
         return self._to_representation(self.objects)
 
     def _to_representation(self, objects):
