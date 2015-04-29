@@ -88,7 +88,7 @@ class DataWhenObjectIsNone(SerializerTestCase):
         serializer = TestSerializer(many=True)
         self.data = serializer.data
 
-    def test_returns_None(self):
+    def test_returns_empty_dict(self):
         self.assertEqual(self.data, {})
 
 
