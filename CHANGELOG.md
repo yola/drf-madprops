@@ -1,5 +1,8 @@
 # [Changelog](https://github.com/yola/drf-madprops)
 
+## 0.1.3
+* Move JSON serialization to `from_native` method
+
 ## 0.1.2
 * Support JSON properties
 
