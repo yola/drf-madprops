@@ -69,9 +69,6 @@ class PropertySerializer(ModelSerializer):
 
     @cached_property
     def data(self):
-        if self.object is None:
-            return None
-
         return self._to_representation(self.objects)
 
     def _to_representation(self, objects):
@@ -91,19 +88,9 @@ class PropertySerializer(ModelSerializer):
         for prop in self.opts.read_only_props:
             self.init_data.pop(prop, None)
 
-        if self.object:
-            return self._update()
-
-        return self._create()
-
-    def _create(self):
-        self.object = RelationsList(
-            self.from_native({k: v}) for k, v in self.init_data.iteritems()
-        )
-
-    def _update(self):
         result = RelationsList()
         existent_props = dict((obj.name, obj) for obj in self.objects)
+
         # Set object to None, because it's used in other methods and
         # might break them.
         self.object = None
@@ -138,7 +125,8 @@ class PropertySerializer(ModelSerializer):
         # Ensure we always work with iterable
         if isinstance(self.object, Iterable):
             return self.object
-        return [self.object]
+
+        return [] if self.object is None else [self.object]
 
     def save_object(self, obj, **kwargs):
         # Ensure we have only one property with the same name
