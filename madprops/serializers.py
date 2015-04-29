@@ -126,10 +126,7 @@ class PropertySerializer(ModelSerializer):
         if isinstance(self.object, Iterable):
             return self.object
 
-        if self.object is None:
-            return []
-
-        return [self.object]
+        return [] if self.object is None else [self.object]
 
     def save_object(self, obj, **kwargs):
         # Ensure we have only one property with the same name
