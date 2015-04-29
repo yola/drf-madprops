@@ -24,6 +24,9 @@ class TestPreference(object):
     def __repr__(self):
         return '<{name}:{value}:{user}>'.format(**self.__dict__)
 
+    def __cmp__(self, other):
+        return cmp(self.name, other.name)
+
 
 class TestUser(object):
 

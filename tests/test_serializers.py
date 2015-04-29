@@ -102,13 +102,9 @@ class ErrorsForObjectsUpdate(SerializerTestCase):
         self.serializer.errors
 
     def test_updates_properties(self):
-        sorted_key = lambda x: x.name
         self.assertEqual(
-            sorted(self.serializer.object, key=sorted_key),
-            sorted(
-                [TestPreference('a', 'b'), TestPreference('c', 'd', 4)],
-                key=sorted_key
-            )
+            sorted(self.serializer.object),
+            sorted([TestPreference('a', 'b'), TestPreference('c', 'd', 4)],)
         )
 
 
