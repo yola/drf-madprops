@@ -11,6 +11,7 @@ from django.db.models import ForeignKey
 class TestPreference(object):
 
     _meta = Mock(fields=[ForeignKey('user', name='user')])
+    objects = Mock()
 
     def __init__(self, name, value, user=None):
         self.name = name

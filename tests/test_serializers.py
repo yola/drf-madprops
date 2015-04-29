@@ -102,9 +102,13 @@ class ErrorsForObjectsUpdate(SerializerTestCase):
         self.serializer.errors
 
     def test_updates_properties(self):
+        sorted_key = lambda x: x.name
         self.assertEqual(
-            sorted(self.serializer.object),
-            sorted([TestPreference('a', 'b'), TestPreference('c', 'd', 4)])
+            sorted(self.serializer.object, key=sorted_key),
+            sorted(
+                [TestPreference('a', 'b'), TestPreference('c', 'd', 4)],
+                key=sorted_key
+            )
         )
 
 
@@ -140,3 +144,27 @@ class ErrorsForReadOnlyProperties(SerializerTestCase):
             self.serializer.object,
             [TestPreference('a', 'b', 4)]
         )
+
+
+class SaveObject(SerializerTestCase):
+    def setUp(self):
+        self.pref = TestPreference('a', 'b', 'user')
+        TestSerializer().save_object(self.pref)
+        self.addCleanup(TestPreference.objects.reset_mock)
+
+    def test_tries_to_update_existent_property(self):
+        TestPreference.objects.filter.assert_called_once_with(
+            user='user', name='a')
+        TestPreference.objects.filter().update.assert_called_once_with(
+            value='b')
+
+
+class SaveObjectForJsonProps(SerializerTestCase):
+    def setUp(self):
+        self.pref = TestPreference('json1', [1, 2], 'user')
+        TestSerializer().save_object(self.pref)
+        self.addCleanup(TestPreference.objects.reset_mock)
+
+    def test_dumps_json_props(self):
+        TestPreference.objects.filter().update.assert_called_once_with(
+            value=json.dumps([1, 2]))
