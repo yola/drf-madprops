@@ -49,6 +49,9 @@ instead of representation listed above, we'll get something like:
 
 - `read_only_props`: list of property names, which values cannot be changed
   via serializer.
+- `json_props`: list of property names, which values are stored as JSON.
+  Serializer will `json.loads()` those values when converting to representation
+  and will `json.dumps()` them before saving.
 
 ### As a nested serializer
 
@@ -60,6 +63,7 @@ class PreferenceSerializer(NestedPropertySerializer):
     class Meta:
         model = Preference
         read_only_props = ('user_token', 'tutorial_email_sent')
+        json_props = ('packages',)
 
 
 class UserSerializer(ModelSerializer):
