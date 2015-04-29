@@ -1,5 +1,8 @@
 # [Changelog](https://github.com/yola/drf-madprops)
 
+## 0.1.2
+* Support JSON properties
+
 ## 0.1.1
 * Handle edge cases when object might be `None` in `data` and `field_to_native`
 attributes of `PropertySerializer` (those cases occur when browsable APIs
