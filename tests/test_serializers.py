@@ -1,3 +1,5 @@
+import json
+
 from mock import Mock
 
 from tests import SerializerTestCase, TestPreference, TestUser
@@ -8,6 +10,7 @@ class TestSerializer(PropertySerializer):
     class Meta:
         model = TestPreference
         read_only_props = ('user_token',)
+        json_props = ('json1', )
 
 
 class FieldToNative(SerializerTestCase):
@@ -52,6 +55,19 @@ class Data(SerializerTestCase):
 
     def test_converts_properties_to_dict(self):
         self.assertEqual(self.data, {'a': 'b', 'c': 'd'})
+
+
+class DataForJsonValues(SerializerTestCase):
+    def setUp(self):
+        serializer = TestSerializer(
+            many=True, instance=(
+                TestPreference('json1', json.dumps([1, 3])),
+                TestPreference('c', 'd'))
+        )
+        self.data = serializer.data
+
+    def test_loads_json_properties(self):
+        self.assertEqual(self.data, {'json1': [1, 3], 'c': 'd'})
 
 
 class DataWhenObjectIsNone(SerializerTestCase):

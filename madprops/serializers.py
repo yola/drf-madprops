@@ -1,4 +1,5 @@
 from collections import Iterable
+import json
 
 from django.db.models import ForeignKey
 from django.utils.functional import cached_property
@@ -11,6 +12,7 @@ class PropertySerializerOptions(ModelSerializerOptions):
     def __init__(self, meta):
         super(PropertySerializerOptions, self).__init__(meta)
         self.read_only_props = getattr(meta, 'read_only_props', [])
+        self.json_props = getattr(meta, 'json_props', [])
         self.exclude = ('id',)
 
     @cached_property
@@ -73,7 +75,12 @@ class PropertySerializer(ModelSerializer):
         return self._to_representation(self.objects)
 
     def _to_representation(self, objects):
-        return dict((obj.name, obj.value) for obj in objects)
+        return dict((obj.name, self._get_value(obj)) for obj in objects)
+
+    def _get_value(self, obj):
+        if obj.name in self.opts.json_props:
+            return json.loads(obj.value)
+        return obj.value
 
     @cached_property
     def errors(self):
@@ -128,6 +135,10 @@ class PropertySerializer(ModelSerializer):
         return [self.object]
 
     def save_object(self, obj, **kwargs):
+        # Deal with JSON properties
+        if obj.name in self.opts.json_props:
+            obj.value = json.dumps(obj.value)
+
         # Ensure we have only one property with the same name
         model = self.opts.model
         parent_obj_field = self.opts.parent_obj_field
