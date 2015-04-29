@@ -118,14 +118,20 @@ class PropertySerializer(ModelSerializer):
 
     def from_native(self, data, files=None):
         name, value = data.iteritems().next()
-        data = {'name': name, 'value': value}
+        # Deal with JSON properties
+        if name in self.opts.json_props:
+            value = json.dumps(value)
 
+        data = {'name': name, 'value': value}
+        data = self._from_native_hook(data)
+        return super(PropertySerializer, self).from_native(data, files)
+
+    def _from_native_hook(self, data):
         # Update created property with reference to parent object
         parent_obj_field = self.opts.parent_obj_field
         parent_id_field = parent_obj_field + '_id'
         data[parent_obj_field] = self.context['view'].kwargs[parent_id_field]
-
-        return super(PropertySerializer, self).from_native(data, files)
+        return data
 
     @property
     def objects(self):
@@ -135,10 +141,6 @@ class PropertySerializer(ModelSerializer):
         return [self.object]
 
     def save_object(self, obj, **kwargs):
-        # Deal with JSON properties
-        if obj.name in self.opts.json_props:
-            obj.value = json.dumps(obj.value)
-
         # Ensure we have only one property with the same name
         model = self.opts.model
         parent_obj_field = self.opts.parent_obj_field
@@ -163,7 +165,5 @@ class NestedPropertySerializer(PropertySerializer):
         super(NestedPropertySerializer, self).__init__(**kwargs)
         self.many = True
 
-    def from_native(self, data, files=None):
-        name, value = data.iteritems().next()
-        return super(PropertySerializer, self).from_native(
-            {'name': name, 'value': value}, files)
+    def _from_native_hook(self, data):
+        return data

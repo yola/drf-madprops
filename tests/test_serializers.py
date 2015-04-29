@@ -46,6 +46,19 @@ class FromNative(SerializerTestCase):
         self.assertEqual(self.preference, TestPreference('k1', 'v1', 4))
 
 
+class FromNativeForJsonProperty(SerializerTestCase):
+    def setUp(self):
+        data = {'json1': [1, 2]}
+        context = {'view': Mock(kwargs={'user_id': 4})}
+        serializer = TestSerializer(context=context)
+        self.patch_from_native()
+        self.preference = serializer.from_native(data)
+
+    def test_converts_value_to_json(self):
+        self.assertEqual(
+            self.preference, TestPreference('json1', json.dumps([1, 2]), 4))
+
+
 class Data(SerializerTestCase):
     def setUp(self):
         serializer = TestSerializer(
@@ -153,14 +166,3 @@ class SaveObject(SerializerTestCase):
             user='user', name='a')
         TestPreference.objects.filter().update.assert_called_once_with(
             value='b')
-
-
-class SaveObjectForJsonProps(SerializerTestCase):
-    def setUp(self):
-        self.pref = TestPreference('json1', [1, 2], 'user')
-        TestSerializer().save_object(self.pref)
-        self.addCleanup(TestPreference.objects.reset_mock)
-
-    def test_dumps_json_props(self):
-        TestPreference.objects.filter().update.assert_called_once_with(
-            value=json.dumps([1, 2]))
