@@ -3,14 +3,13 @@ import json
 
 from django.db.models import ForeignKey
 from django.utils.functional import cached_property
-from rest_framework.serializers import (
-    ModelSerializer, ModelSerializerOptions, RelationsList)
+from rest_framework.serializers import ModelSerializer, ListSerializer
 
 
-class PropertySerializerOptions(ModelSerializerOptions):
+class PropertySerializerOptions(object):
     """Meta class options for PropertySerializer"""
     def __init__(self, meta):
-        super(PropertySerializerOptions, self).__init__(meta)
+        self.model = getattr(meta, 'model', None)
         self.read_only_props = getattr(meta, 'read_only_props', [])
         self.json_props = getattr(meta, 'json_props', [])
         self.exclude = ('id',)
@@ -31,6 +30,15 @@ class NestedPropertySerializerOptions(PropertySerializerOptions):
     def __init__(self, meta):
         super(NestedPropertySerializerOptions, self).__init__(meta)
         self.exclude = ('id', self.parent_obj_field)
+
+
+class ListToDictSerializer(ListSerializer):
+    def to_representation(self, value):
+        return super(self, ListToDictSerializer).to_representation(value)
+
+    def to_internal_value(self, data):
+        return super(self, ListToDictSerializer).to_representation(data)
+
 
 
 class PropertySerializer(ModelSerializer):
@@ -61,83 +69,54 @@ class PropertySerializer(ModelSerializer):
 
     _options_class = PropertySerializerOptions
 
-    def field_to_native(self, obj, field_name):
-        if obj is None:
-            return None
+    def __init__(self, *args, **kwargs):
+        super(PropertySerializer, self).__init__(*args, **kwargs)
+        self.opts = self._options_class(self.Meta)
 
-        return self._to_representation(getattr(obj, field_name).all())
+    @classmethod
+    def many_init(cls, *args, **kwargs):
+        kwargs['child'] = cls()
+        return ListToDictSerializer(*args, **kwargs)
+
+    def get_value(self, dictionary):
+        return {self.instance.name: self._get_value(
+            dictionary[self.instance.field_name])}
 
     @cached_property
     def data(self):
-        return self._to_representation(self.objects)
-
-    def _to_representation(self, objects):
-        return dict((obj.name, self._get_value(obj)) for obj in objects)
+        return {self.instance.name: self._get_value(self.instance)}
 
     def _get_value(self, obj):
         if obj.name in self.opts.json_props:
             return json.loads(obj.value)
         return obj.value
 
-    @cached_property
-    def errors(self):
-        if not isinstance(self.init_data, dict):
-            return {'non_field_errors': ['Expected a dictionary.']}
+    def create(self, validated_data):
+        self._meta.model.create(**validated_data)
 
-        # Ensure we don't modify read-only properties.  Remove them from input.
-        for prop in self.opts.read_only_props:
-            self.init_data.pop(prop, None)
+    def update(self, obj, validated_data):
+        filters = {
+            parent_obj_field: getattr(obj, parent_obj_field),
+            'name': obj.name
+        }
+        model.objects.filter(**filters).update(value=obj.value)
 
-        result = RelationsList()
-        existent_props = dict((obj.name, obj) for obj in self.objects)
-
-        # Set object to None, because it's used in other methods and
-        # might break them.
-        self.object = None
-        for name, value in self.init_data.iteritems():
-            existent_prop = existent_props.get(name)
-            if existent_prop is not None:
-                existent_prop.value = value
-                result.append(existent_prop)
-            else:
-                result.append(self.from_native({name: value}))
-        self.object = result
-
-    def from_native(self, data, files=None):
+    def to_internal_value(self, data):
         name, value = data.iteritems().next()
         # Deal with JSON properties
         if name in self.opts.json_props:
             value = json.dumps(value)
 
         data = {'name': name, 'value': value}
-        data = self._from_native_hook(data)
-        return super(PropertySerializer, self).from_native(data, files)
+        data = self._to_internal_value_hook(data)
+        return super(PropertySerializer, self).to_internal_value(data)
 
-    def _from_native_hook(self, data):
+    def _to_internal_value_hook(self, data):
         # Update created property with reference to parent object
         parent_obj_field = self.opts.parent_obj_field
         parent_id_field = parent_obj_field + '_id'
         data[parent_obj_field] = self.context['view'].kwargs[parent_id_field]
         return data
-
-    @property
-    def objects(self):
-        # Ensure we always work with iterable
-        if isinstance(self.object, Iterable):
-            return self.object
-
-        return [] if self.object is None else [self.object]
-
-    def save_object(self, obj, **kwargs):
-        # Ensure we have only one property with the same name
-        model = self.opts.model
-        parent_obj_field = self.opts.parent_obj_field
-        filters = {
-            parent_obj_field: getattr(obj, parent_obj_field),
-            'name': obj.name
-        }
-        if not model.objects.filter(**filters).update(value=obj.value):
-            obj.save(**kwargs)
 
 
 class NestedPropertySerializer(PropertySerializer):
@@ -146,12 +125,4 @@ class NestedPropertySerializer(PropertySerializer):
     Intended to be used as a base class for serializer for property resource
     exposed as a nested resource.
     """
-
     _options_class = NestedPropertySerializerOptions
-
-    def __init__(self, **kwargs):
-        super(NestedPropertySerializer, self).__init__(**kwargs)
-        self.many = True
-
-    def _from_native_hook(self, data):
-        return data

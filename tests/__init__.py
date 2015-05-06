@@ -44,8 +44,8 @@ class SerializerTestCase(TestCase):
 
     def patch_from_native(self):
         patcher = patch(
-            'madprops.serializers.ModelSerializer.from_native',
-            new=lambda self, data, files: TestPreference(
+            'madprops.serializers.ModelSerializer.to_internal_value',
+            new=lambda self, data: TestPreference(
                 data['name'], data['value'], data.get('user'))
         )
         self.patched_from_native = patcher.start()
