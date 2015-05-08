@@ -4,6 +4,7 @@ from mock import Mock
 
 from tests import SerializerTestCase, TestPreference, TestUser
 from madprops.serializers import PropertySerializer
+from rest_framework.serializers import ValidationError
 
 
 class TestSerializer(PropertySerializer):
@@ -11,6 +12,11 @@ class TestSerializer(PropertySerializer):
         model = TestPreference
         read_only_props = ('user_token',)
         json_props = ('json1', )
+
+    def validate(self, attrs):
+        if attrs['name'] == 'a' and attrs['value'] == 'invalid':
+            raise ValidationError('No, you *bad* test!')
+        return attrs
 
 
 class FieldToNative(SerializerTestCase):
@@ -153,6 +159,22 @@ class ErrorsForReadOnlyProperties(SerializerTestCase):
             self.serializer.object,
             [TestPreference('a', 'b', 4)]
         )
+
+
+class ValidatesProperties(SerializerTestCase):
+    def setUp(self):
+        self.serializer = TestSerializer(
+            data={'a': 'invalid'},
+            many=True,
+            context={'view': Mock(kwargs={'user_id': 4})}
+        )
+        self.patch_from_native()
+
+    def test_errors_is_a_dict(self):
+        self.assertIsInstance(self.serializer.errors, dict)
+
+    def test_validation_can_fail(self):
+        self.assertFalse(self.serializer.is_valid())
 
 
 class SaveObject(SerializerTestCase):
