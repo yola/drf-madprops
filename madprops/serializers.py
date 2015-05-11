@@ -102,6 +102,7 @@ class PropertySerializer(ModelSerializer):
             else:
                 result.append(self.from_native({name: value}))
         self.object = result
+        return self._errors
 
     def from_native(self, data, files=None):
         name, value = data.iteritems().next()
