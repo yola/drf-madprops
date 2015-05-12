@@ -13,13 +13,34 @@ class TestSerializer(PropertySerializer):
         json_props = ('json1', )
 
 
+class FieldToNative(SerializerTestCase):
+    def setUp(self):
+        self.preferences = {'k1': 'v1', 'k2': 'v2'}
+        user = TestUser()
+        user.preferences = self.preferences
+        self.representation = TestSerializer().field_to_native(
+            user, 'preferences')
+
+    def test_converts_properties_to_dict(self):
+        self.assertEqual(self.preferences, self.representation)
+
+
+class FieldToNativeWhenObjectIsNone(SerializerTestCase):
+    def setUp(self):
+        self.representation = TestSerializer().field_to_native(
+            None, 'preferences')
+
+    def test_returns_None(self):
+        self.assertIsNone(self.representation)
+
+
 class FromNative(SerializerTestCase):
     def setUp(self):
         data = {'k1': 'v1'}
         context = {'view': Mock(kwargs={'user_id': 4})}
         serializer = TestSerializer(context=context)
         self.patch_from_native()
-        self.preference = serializer.to_internal_value(data)
+        self.preference = serializer.from_native(data)
 
     def test_passes_updated_data_to_parent_method(self):
         self.assertEqual(self.preference, TestPreference('k1', 'v1', 4))
@@ -31,7 +52,7 @@ class FromNativeForJsonProperty(SerializerTestCase):
         context = {'view': Mock(kwargs={'user_id': 4})}
         serializer = TestSerializer(context=context)
         self.patch_from_native()
-        self.preference = serializer.to_internal_value(data)
+        self.preference = serializer.from_native(data)
 
     def test_converts_value_to_json(self):
         self.assertEqual(
@@ -108,13 +129,11 @@ class ErrorsForObjectsCreate(SerializerTestCase):
             context={'view': Mock(kwargs={'user_id': 4})}
         )
         self.patch_from_native()
-        self.serializer.is_valid()
-        self.serializer.save()
+        self.serializer.errors
 
     def test_updates_properties(self):
-        import ipdb;ipdb.set_trace()
         self.assertEqual(
-            sorted(self.serializer.instance),
+            sorted(self.serializer.object),
             sorted([TestPreference('a', 'b', 4), TestPreference('c', 'd', 4)])
         )
 
@@ -127,11 +146,11 @@ class ErrorsForReadOnlyProperties(SerializerTestCase):
             context={'view': Mock(kwargs={'user_id': 4})}
         )
         self.patch_from_native()
-        self.serializer.is_valid()
+        self.serializer.errors
 
     def test_skips_readonly_prpertieso(self):
         self.assertEqual(
-            self.serializer.validated_data,
+            self.serializer.object,
             [TestPreference('a', 'b', 4)]
         )
 
