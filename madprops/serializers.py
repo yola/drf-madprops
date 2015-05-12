@@ -164,7 +164,7 @@ class PropertySerializer(ModelSerializer):
         parent_obj_field = self.opts.parent_obj_field
         parent_id_field = parent_obj_field + '_id'
         data[parent_obj_field] = self.context.get(
-            'parent_id', self.context['view'].kwargs[parent_id_field])
+            'parent_id') or self.context['view'].kwargs[parent_id_field]
         return data
 
 
@@ -173,6 +173,50 @@ class PropertiesOwnerSerializer(ModelSerializer):
     support this, we have to use this class as a base class for parent model
     serialization.
     """
+    def create(self, validated_data):
+        """ Code copied from DRF. Removed check for nested writes, added
+        preferences save.
+        """
+        ModelClass = self.Meta.model
+
+        # Remove many-to-many relationships from validated_data.
+        # They are not valid arguments to the default `.create()` method,
+        # as they require that the instance has already been saved.
+        info = model_meta.get_field_info(ModelClass)
+        many_to_many = {}
+        for field_name, relation_info in info.relations.items():
+            if relation_info.to_many and (field_name in validated_data):
+                many_to_many[field_name] = validated_data.pop(field_name)
+
+        try:
+            instance = ModelClass.objects.create(**validated_data)
+        except TypeError as exc:
+            msg = (
+                'Got a `TypeError` when calling `%s.objects.create()`. '
+                'This may be because you have a writable field on the '
+                'serializer class that is not a valid argument to '
+                '`%s.objects.create()`. You may need to make the field '
+                'read-only, or override the %s.create() method to handle '
+                'this correctly.\nOriginal exception text was: %s.' %
+                (
+                    ModelClass.__name__,
+                    ModelClass.__name__,
+                    self.__class__.__name__,
+                    exc
+                )
+            )
+            raise TypeError(msg)
+
+        # Save many-to-many relationships after the instance is created.
+        if many_to_many:
+            for field_name, value in many_to_many.items():
+                if isinstance(self.fields[field_name], ListToDictSerializer):
+                    self._save_properties(instance, field_name)
+                    continue
+                setattr(instance, field_name, value)
+
+        return instance
+
     def update(self, instance, validated_data):
         for attr, value in validated_data.items():
             if isinstance(self.fields[attr], ListToDictSerializer):
@@ -185,8 +229,12 @@ class PropertiesOwnerSerializer(ModelSerializer):
 
     def _save_properties(self, instance, field_name):
         data_dict = self._data_list_to_dict(self.validated_data[field_name])
+        # Get correct serializer class.
         properties_serializer = self.fields[field_name].child.__class__
-        serializer = properties_serializer(data=data_dict, many=True)
+        # We can't pass parent ID using View callback like we do for edits.
+        # So we pass parent_id directly.
+        serializer = properties_serializer(
+            data=data_dict, many=True, context={'parent_id': instance.pk})
         serializer.is_valid()
         serializer.save()
 
