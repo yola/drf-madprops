@@ -1,7 +1,10 @@
 # [Changelog](https://github.com/yola/drf-madprops)
 
+## 0.1.6
+* Support validation on property updates
+
 ## 0.1.5
-* Support validation
+* Support validation on property creation
 
 ## 0.1.4
 * Fix update for the case when self.object is an empty queryset
