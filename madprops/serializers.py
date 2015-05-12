@@ -26,6 +26,11 @@ class PropertySerializerOptions(object):
 
 
 class ListToDictSerializer(ListSerializer):
+    """This is how the DRF 3.0 works. For many=True case it automatically
+    returns a "List" serializer instead of original one
+    (__new__ method is overriden). Thus, we need to teach it to work with
+    {<prop_name>: <prop_value>...} dict instead of standard
+    [{'name': <prop_name>, 'value': <prop_value>}...]."""
     default_error_messages = []
 
     @property
@@ -163,6 +168,9 @@ class PropertySerializer(ModelSerializer):
 
 
 class PropertiesOwnerSerializer(ModelSerializer):
+    """Since we need to support nested writable fields, but DRF 3.0 doesn't
+    support this, we have to use this class as a base class for parent model
+    serialization."""
     def update(self, instance, validated_data):
         for attr, value in validated_data.items():
             if isinstance(self.fields[attr], ListToDictSerializer):
