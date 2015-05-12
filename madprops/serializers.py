@@ -1,6 +1,7 @@
 import json
 
 from django.db.models import ForeignKey
+from rest_framework.utils import model_meta
 from django.utils.functional import cached_property
 from rest_framework.serializers import ListSerializer, ModelSerializer
 
