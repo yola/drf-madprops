@@ -1,4 +1,3 @@
-from collections import Iterable
 import json
 
 from django.db.models import ForeignKey
@@ -53,7 +52,8 @@ class ListToDictSerializer(ListSerializer):
 
     def save(self):
         return [
-            self.child.save(property_data) for data in self.validated_data
+            self.child.save(property_data)
+            for property_data in self.validated_data
         ]
 
 
@@ -94,7 +94,8 @@ class PropertySerializer(ModelSerializer):
         if isinstance(data, dict):
             return {data['name']: self._get_value(data)}
         else:
-            return {data.name: self._get_value({'name': data.name, 'value': data.value})}
+            return {data.name: self._get_value(
+                {'name': data.name, 'value': data.value})}
 
     def _get_value(self, data):
         if data['name'] in self.opts.json_props:
@@ -104,9 +105,6 @@ class PropertySerializer(ModelSerializer):
     def save(self, property_data=None):
         property_data = property_data or self.validated_data
         prop_name = property_data['name']
-
-        if prop_name in self.opts.read_only_props:
-            return prop
 
         # Try to find property by it's name.
         parent_obj_field = self.opts.parent_obj_field
@@ -118,8 +116,12 @@ class PropertySerializer(ModelSerializer):
         # If it already exists - update it's value. Otherwise - create a new
         # property.
         prop = self.Meta.model.objects.filter(**filters).first()
+
+        if prop_name in self.opts.read_only_props:
+            return prop
+
         if prop:
-            prop.value=property_data['value']
+            prop.value = property_data['value']
             prop.save()
         else:
             prop = self.Meta.model.objects.create(**property_data)
@@ -155,8 +157,8 @@ class PropertySerializer(ModelSerializer):
         # from view.
         parent_obj_field = self.opts.parent_obj_field
         parent_id_field = parent_obj_field + '_id'
-        data[parent_obj_field] = self.context.get('parent_id',
-            self.context['view'].kwargs[parent_id_field])
+        data[parent_obj_field] = self.context.get(
+            'parent_id', self.context['view'].kwargs[parent_id_field])
         return data
 
 
