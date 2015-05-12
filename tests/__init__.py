@@ -43,10 +43,22 @@ class TestUser(object):
 class SerializerTestCase(TestCase):
 
     def patch_from_native(self):
+        def from_native(self, data, files):
+            self._errors = {}
+            if data:
+                self.perform_validation(data)
+            return TestPreference(data['name'], data['value'],
+                                  data.get('user'))
+
         patcher = patch(
             'madprops.serializers.ModelSerializer.from_native',
-            new=lambda self, data, files: TestPreference(
-                data['name'], data['value'], data.get('user'))
-        )
+            new=from_native)
         self.patched_from_native = patcher.start()
+        self.addCleanup(patcher.stop)
+
+        # get_fields inspects the model's _meta, deeply
+        patcher = patch(
+            'madprops.serializers.ModelSerializer.get_fields',
+            new=lambda self: {})
+        self.patched_get_fields = patcher.start()
         self.addCleanup(patcher.stop)
