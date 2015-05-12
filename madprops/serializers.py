@@ -91,18 +91,15 @@ class PropertySerializer(ModelSerializer):
         result = RelationsList()
         existent_props = dict((obj.name, obj) for obj in self.objects)
 
-        # Set object to None, because it's used in other methods and
-        # might break them.
-        self.object = None
+        errors = {}
         for name, value in self.init_data.iteritems():
-            existent_prop = existent_props.get(name)
-            if existent_prop is not None:
-                existent_prop.value = value
-                result.append(existent_prop)
-            else:
-                result.append(self.from_native({name: value}))
+            self.object = existent_props.get(name)
+            updated = self.from_native({name: value})
+            errors.update(self._errors)
+            if not self._errors:
+                result.append(updated)
         self.object = result
-        return self._errors
+        return errors
 
     def from_native(self, data, files=None):
         name, value = data.iteritems().next()

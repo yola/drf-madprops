@@ -123,7 +123,7 @@ class ErrorsForObjectsUpdate(SerializerTestCase):
     def test_updates_properties(self):
         self.assertEqual(
             sorted(self.serializer.object),
-            sorted([TestPreference('a', 'b'), TestPreference('c', 'd', 4)],)
+            sorted([TestPreference('a', 'b', 4), TestPreference('c', 'd', 4)],)
         )
 
 
@@ -164,6 +164,23 @@ class ErrorsForReadOnlyProperties(SerializerTestCase):
 class ValidatesProperties(SerializerTestCase):
     def setUp(self):
         self.serializer = TestSerializer(
+            data={'a': 'invalid'},
+            many=True,
+            context={'view': Mock(kwargs={'user_id': 4})}
+        )
+        self.patch_from_native()
+
+    def test_errors_is_a_dict(self):
+        self.assertIsInstance(self.serializer.errors, dict)
+
+    def test_validation_can_fail(self):
+        self.assertFalse(self.serializer.is_valid())
+
+
+class ValidatesPropertiesOnUpdate(SerializerTestCase):
+    def setUp(self):
+        self.serializer = TestSerializer(
+            instance=[TestPreference('a', 'b', 4)],
             data={'a': 'invalid'},
             many=True,
             context={'view': Mock(kwargs={'user_id': 4})}
