@@ -241,7 +241,7 @@ class PropertiesOwnerSerializer(ModelSerializer):
 
     def _data_list_to_dict(self, properties_list):
         """[{'name': <prop_name>, 'value': <prop_value>},...] ->
-            {<prop_name>: <prop_value>,...}
+        {<prop_name>: <prop_value>,...}
         """
         properties_dict = {}
         for property in properties_list:
