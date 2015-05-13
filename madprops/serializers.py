@@ -30,7 +30,7 @@ class ListToDictSerializer(ListSerializer):
     """This is how the DRF 3.0 works. For many=True case it automatically
     returns a "List" serializer instead of original one
     (__new__ method is overriden). Thus, we need to teach it to work with
-    {<prop_name>: <prop_value>...} dict instead of standard
+    {<prop_name>: <prop_value>,...} dict instead of standard
     [{'name': <prop_name>, 'value': <prop_value>}...].
     """
     default_error_messages = []
@@ -231,15 +231,18 @@ class PropertiesOwnerSerializer(ModelSerializer):
     def _save_properties(self, instance, field_name):
         data_dict = self._data_list_to_dict(self.validated_data[field_name])
         # Get correct serializer class.
-        properties_serializer = self.fields[field_name].child.__class__
+        properties_serializer_class = self.fields[field_name].child.__class__
         # We can't pass parent ID using View callback like we do for edits.
         # So we pass parent_id directly.
-        serializer = properties_serializer(
+        serializer = properties_serializer_class(
             data=data_dict, many=True, context={'parent_id': instance.pk})
         serializer.is_valid()
         serializer.save()
 
     def _data_list_to_dict(self, properties_list):
+        """[{'name': <prop_name>, 'value': <prop_value>},...] ->
+            {<prop_name>: <prop_value>,...}
+        """
         properties_dict = {}
         for property in properties_list:
             properties_dict[property['name']] = property['value']
