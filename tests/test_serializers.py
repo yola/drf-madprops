@@ -3,7 +3,7 @@ import json
 from django.db import models
 from mock import Mock, patch
 
-from madprops.serializers import PropertySerializer, PropertiesOwnerSerializer
+from madprops.serializers import PropertiesOwnerSerializer, PropertySerializer
 from unittest2 import TestCase
 
 
