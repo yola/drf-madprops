@@ -167,6 +167,9 @@ class PropertiesOwnerSerializer(ModelSerializer):
     ModelSerializer.
     """
     def create(self, validated_data):
+        # Standard DRF .create() prohibits nested writable serializers, so
+        # we do a trick - first remove propertiesfrom validated data, save
+        # parent object, and then save properties separately.
         validated_data_minus_properties = dict(validated_data)
         properties_field = None
         for (field, serializer) in validated_data:
