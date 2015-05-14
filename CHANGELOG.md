@@ -1,5 +1,8 @@
 # [Changelog](https://github.com/yola/drf-madprops)
 
+## 0.2.1
+* New version for DRF 3.x
+
 ## 0.1.5
 * Support validation
 

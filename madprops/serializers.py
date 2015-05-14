@@ -27,7 +27,7 @@ class PropertySerializerOptions(object):
 
 
 class ListToDictSerializer(ListSerializer):
-    """This is how the DRF 3.0 works. For many=True case it automatically
+    """This is how the DRF 3.x works. For many=True case it automatically
     returns a "List" serializer instead of original one
     (__new__ method is overriden). Thus, we need to teach it to work with
     {<prop_name>: <prop_value>,...} dict instead of standard
