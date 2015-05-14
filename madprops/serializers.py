@@ -52,9 +52,7 @@ class ListToDictSerializer(ListSerializer):
         return result_dict
 
     def to_internal_value(self, data):
-        data_list = []
-        for (prop_name, prop_value) in data.items():
-            data_list.append({'name': prop_name, 'value': prop_value})
+        data_list = [{name: value} for (name, value) in data.items()]
         return super(ListToDictSerializer, self).to_internal_value(data_list)
 
     def save(self):
@@ -131,12 +129,7 @@ class PropertySerializer(ModelSerializer):
         return prop
 
     def to_internal_value(self, data):
-        # Data can be in two formats here depending on many=True/False:
-        #   - {<prop_name>: <prop_value>}
-        #   - {'name': <prop_name>, 'value': <prop_value>}
-        # Convert to the format accepted by standard DRF serializers.
-        if not('name' in data and 'value' in data):
-            data = self._to_extended_dict(data)
+        data = self._to_extended_dict(data)
 
         # Handle JSON fields (value encoded as JSON).
         if data['name'] in self.opts.json_props:
