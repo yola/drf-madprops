@@ -171,9 +171,12 @@ class PropertySerializer(ModelSerializer):
 
 
 class PropertiesOwnerSerializer(ModelSerializer):
-    """Since we need to support nested writable fields, but DRF 3.0 doesn't
-    support this, we have to use this class as a base class for parent model
-    serialization.
+    """Base class for "parent" serializers.
+
+    If you want to use PropertySerializer with a parent model (e.g. as a
+    nested serializer for User serializer), and have this field writable  -
+    you have to inherit you parent serializer from this class, not
+    ModelSerializer.
     """
     def create(self, validated_data):
         """ Code copied from DRF. Removed check for nested writes, added
@@ -248,6 +251,5 @@ class PropertiesOwnerSerializer(ModelSerializer):
         properties_dict = {}
         for property in properties_list:
             properties_dict[property['name']] = property['value']
-
 
         return properties_dict

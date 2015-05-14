@@ -4,6 +4,7 @@ from django.db import models
 from mock import Mock, patch
 
 from madprops.serializers import PropertiesOwnerSerializer, PropertySerializer
+from rest_framework.serializers import ModelSerializer
 from unittest2 import TestCase
 
 
@@ -26,7 +27,7 @@ class PreferenceSerializer(PropertySerializer):
         read_only_props = ()
 
 
-class UserSerializer(PropertiesOwnerSerializer):
+class UserSerializer(ModelSerializer):
     class Meta:
         model = User
 

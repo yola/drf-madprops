@@ -56,17 +56,17 @@ instead of representation listed above, we'll get something like:
 ### As a nested serializer
 
 ```python
-from madprops.serializers import NestedPropertySerializer
+from madprops.serializers import PropertySerializer, PropertiesOwnerSerializer
 
 
-class PreferenceSerializer(NestedPropertySerializer):
+class PreferenceSerializer(PropertySerializer):
     class Meta:
         model = Preference
         read_only_props = ('user_token', 'tutorial_email_sent')
         json_props = ('packages',)
 
 
-class UserSerializer(ModelSerializer):
+class UserSerializer(PropertiesOwnerSerializer):
     preferences = PreferenceSerializer(many=True, required=False)
 ```
 
