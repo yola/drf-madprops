@@ -165,7 +165,8 @@ class PropertySerializer(ModelSerializer):
         parent_obj_field = self.opts.parent_obj_field
         parent_id_field = parent_obj_field + '_id'
         data[parent_obj_field] = self.context.get(
-            'parent_id') or self.context['view'].kwargs[parent_id_field]
+            'parent_id') or self.context['view'].kwargs.get(
+                parent_id_field)
         return data
 
 
@@ -237,6 +238,7 @@ class PropertiesOwnerSerializer(ModelSerializer):
         serializer = properties_serializer_class(
             data=data_dict, many=True, context={'parent_id': instance.pk})
         serializer.is_valid()
+
         serializer.save()
 
     def _data_list_to_dict(self, properties_list):
@@ -246,5 +248,6 @@ class PropertiesOwnerSerializer(ModelSerializer):
         properties_dict = {}
         for property in properties_list:
             properties_dict[property['name']] = property['value']
+
 
         return properties_dict
