@@ -167,48 +167,16 @@ class PropertiesOwnerSerializer(ModelSerializer):
     ModelSerializer.
     """
     def create(self, validated_data):
-        """ Code copied from DRF. Removed check for nested writes, added
-        preferences save.
-        """
-        ModelClass = self.Meta.model
+        validated_data_minus_properties = dict(validated_data)
+        properties_field = None
+        for (field, serializer) in validated_data:
+            if isinstance(serializer.child, PropertySerializer):
+                del validated_data_minus_properties[field]
+                properties_field = field
 
-        # Remove many-to-many relationships from validated_data.
-        # They are not valid arguments to the default `.create()` method,
-        # as they require that the instance has already been saved.
-        info = model_meta.get_field_info(ModelClass)
-        many_to_many = {}
-        for field_name, relation_info in info.relations.items():
-            if relation_info.to_many and (field_name in validated_data):
-                many_to_many[field_name] = validated_data.pop(field_name)
-
-        try:
-            instance = ModelClass.objects.create(**validated_data)
-        except TypeError as exc:
-            msg = (
-                'Got a `TypeError` when calling `%s.objects.create()`. '
-                'This may be because you have a writable field on the '
-                'serializer class that is not a valid argument to '
-                '`%s.objects.create()`. You may need to make the field '
-                'read-only, or override the %s.create() method to handle '
-                'this correctly.\nOriginal exception text was: %s.' %
-                (
-                    ModelClass.__name__,
-                    ModelClass.__name__,
-                    self.__class__.__name__,
-                    exc
-                )
-            )
-            raise TypeError(msg)
-
-        # Save many-to-many relationships after the instance is created.
-        if many_to_many:
-            for field_name, value in many_to_many.items():
-                if isinstance(self.fields[field_name], ListToDictSerializer):
-                    self._save_properties(instance, field_name)
-                    continue
-                setattr(instance, field_name, value)
-
-        return instance
+        instance = super(PropertiesOwnerSerializer, self).create(
+            validated_data_minus_properties)
+        self._save_properties(instance, properties_field)
 
     def update(self, instance, validated_data):
         for attr, value in validated_data.items():
