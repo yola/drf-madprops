@@ -67,8 +67,7 @@ class ListToDictSerializer(ListSerializer):
 class PropertySerializer(ModelSerializer):
     """Allows to operate on properties of certain resource as dictionary
 
-    Intended to be used as a base class for serializer for property resource
-    exposed via separate endpoint.
+    Intended to be used as a base class for Property-like model serializer.
 
     We consider Property as a model of the following structure:
 
@@ -97,17 +96,13 @@ class PropertySerializer(ModelSerializer):
         self.opts = self._options_class(self.Meta)
         self.Meta.list_serializer_class = ListToDictSerializer
 
-    def to_representation(self, data):
-        if isinstance(data, dict):
-            return {data['name']: self._get_value(data)}
-        else:
-            return {data.name: self._get_value(
-                {'name': data.name, 'value': data.value})}
+    def to_representation(self, obj):
+        return {obj.name: self._get_value(obj)}
 
-    def _get_value(self, data):
-        if data['name'] in self.opts.json_props:
-            return json.loads(data['value'])
-        return data['value']
+    def _get_value(self, obj):
+        if obj.name in self.opts.json_props:
+            return json.loads(obj.value)
+        return obj.value
 
     def save(self, property_data=None):
         property_data = property_data or self.validated_data
