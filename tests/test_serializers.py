@@ -1,207 +1,221 @@
 import json
 
-from mock import Mock
+from django.db import models
+from mock import Mock, patch
 
-from tests import SerializerTestCase, TestPreference, TestUser
-from madprops.serializers import PropertySerializer
-from rest_framework.serializers import ValidationError
+from madprops.serializers import PropertiesOwnerSerializer, PropertySerializer
+from rest_framework.serializers import ModelSerializer
+from unittest2 import TestCase
 
 
-class TestSerializer(PropertySerializer):
+# Fake models and serializers for them. We have separate models for
+# serialize and de-serialize operations, because we don't need foreign key
+# for serialize testcases, and don't want to have needless mocks.
+class User(models.Model):
+    name = models.CharField(null=False, max_length=150)
+
+
+class UserPreference(models.Model):
+    name = models.CharField(null=False, max_length=150)
+    value = models.CharField(null=False, max_length=150)
+
+
+class PreferenceSerializer(PropertySerializer):
     class Meta:
-        model = TestPreference
-        read_only_props = ('user_token',)
-        json_props = ('json1', )
-
-    def validate(self, attrs):
-        if attrs['name'] == 'a' and attrs['value'] == 'invalid':
-            raise ValidationError('No, you *bad* test!')
-        return attrs
+        model = UserPreference
+        json_props = ('json_prop',)
+        read_only_props = ()
 
 
-class FieldToNative(SerializerTestCase):
+class UserSerializer(ModelSerializer):
+    class Meta:
+        model = User
+
+    preferences = PreferenceSerializer(many=True, required=False)
+
+
+# The following models are used to test JSON -> Object conversions tests.
+class UserForWrite(models.Model):
+    name = models.CharField(null=False, max_length=150)
+
+
+class PreferenceForWrite(models.Model):
+    user = models.ForeignKey(User, related_name='preferences')
+    name = models.CharField(null=False, max_length=150)
+    value = models.CharField(null=False, max_length=150)
+
+
+class PreferenceSerializerForWrite(PropertySerializer):
+    class Meta:
+        model = PreferenceForWrite
+        json_props = ('json_prop',)
+        read_only_props = ()
+
+
+class UserSerializerForWrite(PropertiesOwnerSerializer):
+    class Meta:
+        model = UserForWrite
+
+    preferences = PreferenceSerializerForWrite(many=True, required=False)
+
+
+class SerializeSingleProperty(TestCase):
     def setUp(self):
-        self.preferences = {'k1': 'v1', 'k2': 'v2'}
-        user = TestUser()
-        user.preferences = self.preferences
-        self.representation = TestSerializer().field_to_native(
-            user, 'preferences')
+        obj = UserPreference(name='name1', value='value1')
+        self.serializer = PreferenceSerializer(obj)
 
-    def test_converts_properties_to_dict(self):
-        self.assertEqual(self.preferences, self.representation)
+    def test_property_serialized_correctly(self):
+        self.assertEqual(self.serializer.data, {'name1': 'value1'})
 
 
-class FieldToNativeWhenObjectIsNone(SerializerTestCase):
+class SerializeMultipleProperties(TestCase):
     def setUp(self):
-        self.representation = TestSerializer().field_to_native(
-            None, 'preferences')
+        prefs = [UserPreference(name='name1', value='value1'),
+                 UserPreference(name='name2', value='value2')]
+        self.serializer = PreferenceSerializer(prefs, many=True)
 
-    def test_returns_None(self):
-        self.assertIsNone(self.representation)
+    def test_property_serialized_correctly(self):
+        self.assertEqual(self.serializer.data, {
+            'name1': 'value1', 'name2': 'value2'})
 
 
-class FromNative(SerializerTestCase):
+class SerializeJsonProperty(TestCase):
     def setUp(self):
-        data = {'k1': 'v1'}
-        context = {'view': Mock(kwargs={'user_id': 4})}
-        serializer = TestSerializer(context=context)
-        self.patch_from_native()
-        self.preference = serializer.from_native(data)
+        self.json_value = json.dumps({1: 1})
 
-    def test_passes_updated_data_to_parent_method(self):
-        self.assertEqual(self.preference, TestPreference('k1', 'v1', 4))
+        prefs = [UserPreference(name='name1', value='value1'),
+                 UserPreference(name='json_prop', value=self.json_value)]
+        self.serializer = PreferenceSerializer(prefs, many=True)
+
+    def test_property_serialized_correctly(self):
+        self.assertEqual(self.serializer.data, {
+            'name1': 'value1', 'json_prop': json.loads(self.json_value)})
 
 
-class FromNativeForJsonProperty(SerializerTestCase):
+class SerializePropertiesOwner(TestCase):
     def setUp(self):
-        data = {'json1': [1, 2]}
-        context = {'view': Mock(kwargs={'user_id': 4})}
-        serializer = TestSerializer(context=context)
-        self.patch_from_native()
-        self.preference = serializer.from_native(data)
+        prefs = [UserPreference(name='name1', value='value1'),
+                 UserPreference(name='name2', value='value2')]
+        user = UserForWrite(name='username')
+        user.preferences = prefs
+        self.serializer = UserSerializer(user)
 
-    def test_converts_value_to_json(self):
+    def test_property_serialized_correctly(self):
+        expected_result = {
+            'id': None, 'name': 'username',
+            'preferences': {'name1': 'value1', 'name2': 'value2'}}
+        self.assertEqual(self.serializer.data, expected_result)
+
+
+class DeserializeSingleProperty(TestCase):
+    @patch('rest_framework.relations.RelatedField.get_queryset')
+    @patch.object(PreferenceForWrite, 'objects')
+    @patch.object(PreferenceForWrite, 'save')
+    def setUp(self, save_mock, manager_mock, get_queryset_mock):
+        # This emulates property in the database, which needs to be updated
+        # as a result of given test.
+        self.existing_prop_mock = Mock(name='name', value='value')
+
+        filter_mock = Mock()
+        filter_mock.first = Mock(return_value=self.existing_prop_mock)
+        manager_mock.filter = Mock(return_value=filter_mock)
+
+        get_queryset_mock.return_value = Mock(get=Mock(return_value=1))
+
+        self.json_value_new = {1: None}
+
+        self.serializer = PreferenceSerializerForWrite(
+            data={'json_prop': self.json_value_new}, context={
+                'view': Mock(kwargs={'user_id': 1})})
+        self.serializer.is_valid()
+        self.serializer.save()
+
+    def test_data_is_validated_correctly(self):
         self.assertEqual(
-            self.preference, TestPreference('json1', json.dumps([1, 2]), 4))
+            dict(self.serializer.validated_data), {
+                'name': 'json_prop',
+                'value': json.dumps(self.json_value_new),
+                'user': 1})
 
-
-class Data(SerializerTestCase):
-    def setUp(self):
-        serializer = TestSerializer(
-            many=True, instance=(
-                TestPreference('a', 'b'), TestPreference('c', 'd')))
-        self.data = serializer.data
-
-    def test_converts_properties_to_dict(self):
-        self.assertEqual(self.data, {'a': 'b', 'c': 'd'})
-
-
-class DataForJsonValues(SerializerTestCase):
-    def setUp(self):
-        serializer = TestSerializer(
-            many=True, instance=(
-                TestPreference('json1', json.dumps([1, 3])),
-                TestPreference('c', 'd'))
-        )
-        self.data = serializer.data
-
-    def test_loads_json_properties(self):
-        self.assertEqual(self.data, {'json1': [1, 3], 'c': 'd'})
-
-
-class DataWhenObjectIsNone(SerializerTestCase):
-    def setUp(self):
-        serializer = TestSerializer(many=True)
-        self.data = serializer.data
-
-    def test_returns_empty_dict(self):
-        self.assertEqual(self.data, {})
-
-
-class ErrorsWhenDataIsNotDict(SerializerTestCase):
-    def setUp(self):
-        self.serializer = TestSerializer(data=[])
-
-    def test_returns_error(self):
+    def test_save_called_on_correct_object(self):
+        self.assertEqual(self.existing_prop_mock.save.call_count, 1)
         self.assertEqual(
-            self.serializer.errors,
-            {'non_field_errors': ['Expected a dictionary.']}
-        )
+            self.existing_prop_mock.value, json.dumps(self.json_value_new))
 
 
-class ErrorsForObjectsUpdate(SerializerTestCase):
-    def setUp(self):
-        self.serializer = TestSerializer(
-            data={'a': 'b', 'c': 'd'},
-            instance=(TestPreference('a', 'aa'),),
-            many=True,
-            context={'view': Mock(kwargs={'user_id': 4})}
-        )
-        self.patch_from_native()
-        self.serializer.errors
+class DeserializeMultipleProperties(TestCase):
+    @patch('rest_framework.relations.RelatedField.get_queryset')
+    @patch.object(PreferenceForWrite, 'objects')
+    @patch.object(PreferenceForWrite, 'save')
+    def setUp(self, save_mock, manager_mock, get_queryset_mock):
+        self.manager_mock = manager_mock
 
-    def test_updates_properties(self):
+        filter_mock = Mock()
+        self.existing_prop_mock = Mock(name='prop1', value='value1')
+        filter_mock.first.side_effect = [self.existing_prop_mock, None]
+        manager_mock.filter = Mock(return_value=filter_mock)
+        get_queryset_mock.return_value = Mock(get=Mock(return_value=1))
+
+        self.serializer = PreferenceSerializerForWrite(
+            data={'prop1': 'value_new', 'prop2': 'value2'}, context={
+                'view': Mock(kwargs={'user_id': 1})}, many=True)
+        self.serializer.is_valid()
+        self.serializer.save()
+
+    def test_data_is_validated_correctly(self):
+        self.assertEqual(self.serializer.validated_data, [
+            {'name': 'prop1', 'value': 'value_new', 'user': 1},
+            {'name': 'prop2', 'value': 'value2', 'user': 1}])
+
+    def test_existing_property_is_updated(self):
+        self.assertEqual(self.existing_prop_mock.save.call_count, 1)
         self.assertEqual(
-            sorted(self.serializer.object),
-            sorted([TestPreference('a', 'b', 4), TestPreference('c', 'd', 4)],)
-        )
+            self.existing_prop_mock.value, 'value_new')
+
+    def test_new_property_is_created(self):
+        self.manager_mock.create.assert_called_once_with(
+            name='prop2', value='value2', user=1)
 
 
-class ErrorsForObjectsCreate(SerializerTestCase):
-    def setUp(self):
-        self.serializer = TestSerializer(
-            data={'a': 'b', 'c': 'd'},
-            many=True,
-            context={'view': Mock(kwargs={'user_id': 4})}
-        )
-        self.patch_from_native()
-        self.serializer.errors
+class DeserializePropertiesOwner(TestCase):
+    @patch('rest_framework.relations.RelatedField.get_queryset')
+    @patch.object(PreferenceForWrite, 'objects')
+    @patch.object(PreferenceForWrite, 'save')
+    @patch.object(User, 'save')
+    def setUp(self, user_save_mock, save_mock, manager_mock,
+              get_queryset_mock):
+        self.manager_mock = manager_mock
+        self.user_save_mock = user_save_mock
+        filter_mock = Mock()
+        self.existing_prop_mock = Mock(name='prop1', value='value1')
+        filter_mock.first.side_effect = [self.existing_prop_mock, None]
+        manager_mock.filter = Mock(return_value=filter_mock)
+        get_queryset_mock.return_value = Mock(get=Mock(return_value=1))
 
-    def test_updates_properties(self):
+        self.user = User(name='username', id=1)
+
+        self.serializer = UserSerializerForWrite(self.user, data={
+            'name': 'new_username', 'preferences': {
+                'prop1': 'value_new',
+                'prop2': 'value2'}},
+            context={'view': Mock(kwargs={'user_id': 1})})
+        self.serializer.is_valid()
+        self.serializer.save()
+
+    def test_data_is_validated_correctly(self):
+        self.assertEqual(self.serializer.validated_data, {
+            'name': 'new_username', 'preferences':
+            [{'name': 'prop1', 'value': 'value_new', 'user': self.user},
+             {'name': 'prop2', 'value': 'value2', 'user': self.user}]})
+
+    def test_existing_property_is_updated(self):
+        self.assertEqual(self.existing_prop_mock.save.call_count, 1)
         self.assertEqual(
-            sorted(self.serializer.object),
-            sorted([TestPreference('a', 'b', 4), TestPreference('c', 'd', 4)])
-        )
+            self.existing_prop_mock.value, 'value_new')
 
+    def test_new_property_is_created(self):
+        self.manager_mock.create.assert_called_once_with(
+            name='prop2', value='value2', user=self.user)
 
-class ErrorsForReadOnlyProperties(SerializerTestCase):
-    def setUp(self):
-        self.serializer = TestSerializer(
-            data={'a': 'b', 'user_token': 'new_value'},
-            many=True,
-            context={'view': Mock(kwargs={'user_id': 4})}
-        )
-        self.patch_from_native()
-        self.serializer.errors
-
-    def test_skips_readonly_prpertieso(self):
-        self.assertEqual(
-            self.serializer.object,
-            [TestPreference('a', 'b', 4)]
-        )
-
-
-class ValidatesProperties(SerializerTestCase):
-    def setUp(self):
-        self.serializer = TestSerializer(
-            data={'a': 'invalid'},
-            many=True,
-            context={'view': Mock(kwargs={'user_id': 4})}
-        )
-        self.patch_from_native()
-
-    def test_errors_is_a_dict(self):
-        self.assertIsInstance(self.serializer.errors, dict)
-
-    def test_validation_can_fail(self):
-        self.assertFalse(self.serializer.is_valid())
-
-
-class ValidatesPropertiesOnUpdate(SerializerTestCase):
-    def setUp(self):
-        self.serializer = TestSerializer(
-            instance=[TestPreference('a', 'b', 4)],
-            data={'a': 'invalid'},
-            many=True,
-            context={'view': Mock(kwargs={'user_id': 4})}
-        )
-        self.patch_from_native()
-
-    def test_errors_is_a_dict(self):
-        self.assertIsInstance(self.serializer.errors, dict)
-
-    def test_validation_can_fail(self):
-        self.assertFalse(self.serializer.is_valid())
-
-
-class SaveObject(SerializerTestCase):
-    def setUp(self):
-        self.pref = TestPreference('a', 'b', 'user')
-        TestSerializer().save_object(self.pref)
-        self.addCleanup(TestPreference.objects.reset_mock)
-
-    def test_tries_to_update_existent_property(self):
-        TestPreference.objects.filter.assert_called_once_with(
-            user='user', name='a')
-        TestPreference.objects.filter().update.assert_called_once_with(
-            value='b')
+    def test_owner_is_updated(self):
+        self.assertEqual(self.user_save_mock.call_count, 1)

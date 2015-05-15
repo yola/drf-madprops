@@ -1,19 +1,18 @@
-from collections import Iterable
 import json
 
 from django.db.models import ForeignKey
 from django.utils.functional import cached_property
-from rest_framework.serializers import (
-    ModelSerializer, ModelSerializerOptions, RelationsList)
+from rest_framework.serializers import ListSerializer, ModelSerializer
 
 
-class PropertySerializerOptions(ModelSerializerOptions):
+class PropertySerializerOptions(object):
     """Meta class options for PropertySerializer"""
     def __init__(self, meta):
-        super(PropertySerializerOptions, self).__init__(meta)
+        self.model = getattr(meta, 'model', None)
         self.read_only_props = getattr(meta, 'read_only_props', [])
         self.json_props = getattr(meta, 'json_props', [])
         self.exclude = ('id',)
+        self.list_serializer_class = ListToDictSerializer
 
     @cached_property
     def parent_obj_field(self):
@@ -26,18 +25,46 @@ class PropertySerializerOptions(ModelSerializerOptions):
             '{0} misses relation to parent model'.format(self.model))
 
 
-class NestedPropertySerializerOptions(PropertySerializerOptions):
-    """Meta class options for NestedPropertySerializer"""
-    def __init__(self, meta):
-        super(NestedPropertySerializerOptions, self).__init__(meta)
-        self.exclude = ('id', self.parent_obj_field)
+class ListToDictSerializer(ListSerializer):
+    """This is how the DRF 3.x works. For many=True case it automatically
+    returns a "List" serializer instead of original one
+    (__new__ method is overriden). Thus, we need to teach it to work with
+    {<prop_name>: <prop_value>,...} dict instead of standard
+    [{'name': <prop_name>, 'value': <prop_value>}...].
+    """
+    default_error_messages = []
+
+    @property
+    def data(self):
+        return super(ListSerializer, self).data
+
+    def to_representation(self, value):
+        # Since this is ListSerializer, it makes everything a list. We need
+        # dict (<name>: <value>}, so convert it to dictionary.
+        result_list = super(
+            ListToDictSerializer, self).to_representation(value)
+
+        result_dict = {}
+        for pair in result_list:
+            result_dict.update(pair)
+
+        return result_dict
+
+    def to_internal_value(self, data):
+        data_list = [{name: value} for (name, value) in data.items()]
+        return super(ListToDictSerializer, self).to_internal_value(data_list)
+
+    def save(self):
+        return [
+            self.child.save(property_data)
+            for property_data in self.validated_data
+        ]
 
 
 class PropertySerializer(ModelSerializer):
     """Allows to operate on properties of certain resource as dictionary
 
-    Intended to be used as a base class for serializer for property resource
-    exposed via separate endpoint.
+    Intended to be used as a base class for Property-like model serializer.
 
     We consider Property as a model of the following structure:
 
@@ -61,95 +88,120 @@ class PropertySerializer(ModelSerializer):
 
     _options_class = PropertySerializerOptions
 
-    def field_to_native(self, obj, field_name):
-        if obj is None:
-            return None
+    def __init__(self, *args, **kwargs):
+        super(PropertySerializer, self).__init__(*args, **kwargs)
+        self.opts = self._options_class(self.Meta)
+        self.Meta.list_serializer_class = ListToDictSerializer
 
-        return self._to_representation(getattr(obj, field_name).all())
-
-    @cached_property
-    def data(self):
-        return self._to_representation(self.objects)
-
-    def _to_representation(self, objects):
-        return dict((obj.name, self._get_value(obj)) for obj in objects)
+    def to_representation(self, obj):
+        return {obj.name: self._get_value(obj)}
 
     def _get_value(self, obj):
         if obj.name in self.opts.json_props:
             return json.loads(obj.value)
         return obj.value
 
-    @cached_property
-    def errors(self):
-        if not isinstance(self.init_data, dict):
-            return {'non_field_errors': ['Expected a dictionary.']}
+    def save(self, property_data=None):
+        property_data = property_data or self.validated_data
+        prop_name = property_data['name']
 
-        # Ensure we don't modify read-only properties.  Remove them from input.
-        for prop in self.opts.read_only_props:
-            self.init_data.pop(prop, None)
-
-        result = RelationsList()
-        existent_props = dict((obj.name, obj) for obj in self.objects)
-
-        errors = {}
-        for name, value in self.init_data.iteritems():
-            self.object = existent_props.get(name)
-            updated = self.from_native({name: value})
-            errors.update(self._errors)
-            if not self._errors:
-                result.append(updated)
-        self.object = result
-        return errors
-
-    def from_native(self, data, files=None):
-        name, value = data.iteritems().next()
-        # Deal with JSON properties
-        if name in self.opts.json_props:
-            value = json.dumps(value)
-
-        data = {'name': name, 'value': value}
-        data = self._from_native_hook(data)
-        return super(PropertySerializer, self).from_native(data, files)
-
-    def _from_native_hook(self, data):
-        # Update created property with reference to parent object
-        parent_obj_field = self.opts.parent_obj_field
-        parent_id_field = parent_obj_field + '_id'
-        data[parent_obj_field] = self.context['view'].kwargs[parent_id_field]
-        return data
-
-    @property
-    def objects(self):
-        # Ensure we always work with iterable
-        if isinstance(self.object, Iterable):
-            return self.object
-
-        return [] if self.object is None else [self.object]
-
-    def save_object(self, obj, **kwargs):
-        # Ensure we have only one property with the same name
-        model = self.opts.model
+        # Try to find property by it's name.
         parent_obj_field = self.opts.parent_obj_field
         filters = {
-            parent_obj_field: getattr(obj, parent_obj_field),
-            'name': obj.name
+            parent_obj_field: property_data[parent_obj_field],
+            'name': prop_name
         }
-        if not model.objects.filter(**filters).update(value=obj.value):
-            obj.save(**kwargs)
 
+        # If it already exists - update it's value. Otherwise - create a new
+        # property.
+        prop = self.Meta.model.objects.filter(**filters).first()
 
-class NestedPropertySerializer(PropertySerializer):
-    """Version of PropertySerializer for nested resources
+        if prop_name in self.opts.read_only_props:
+            return prop
 
-    Intended to be used as a base class for serializer for property resource
-    exposed as a nested resource.
-    """
+        if prop:
+            prop.value = property_data['value']
+            prop.save()
+        else:
+            prop = self.Meta.model.objects.create(**property_data)
 
-    _options_class = NestedPropertySerializerOptions
+        return prop
 
-    def __init__(self, **kwargs):
-        super(NestedPropertySerializer, self).__init__(**kwargs)
-        self.many = True
+    def to_internal_value(self, data):
+        data = self._to_extended_dict(data)
 
-    def _from_native_hook(self, data):
+        # Handle JSON fields (value encoded as JSON).
+        if data['name'] in self.opts.json_props:
+            data['value'] = json.dumps(data['value'])
+
+        data = self._add_parent_obj_field(data)
+        return super(PropertySerializer, self).to_internal_value(data)
+
+    def _to_extended_dict(self, data):
+        """ Convert dictionary of properties:
+        {<prop_name>: <prop_value>} ->
+            {'name': <prop_name>, 'value': <prop_value>}
+        """
+        prop_name, prop_value = data.items()[0]
+        return {'name': prop_name, 'value': prop_value}
+
+    def _add_parent_obj_field(self, data):
+        # Property requires ID of parent object (properties owner, e.g. User
+        # for user's properties case). Take it from context, which is passed
+        # from view.
+        parent_obj_field = self.opts.parent_obj_field
+        parent_id_field = parent_obj_field + '_id'
+        data[parent_obj_field] = self.context.get(
+            'parent_id') or self.context['view'].kwargs.get(
+                parent_id_field)
         return data
+
+
+class PropertiesOwnerSerializer(ModelSerializer):
+    """Base class for "parent" serializers.
+
+    If you want to use PropertySerializer with a parent model (e.g. as a
+    nested serializer for User serializer), and have this field writable  -
+    you have to inherit you parent serializer from this class, not
+    ModelSerializer.
+    """
+    def create(self, validated_data):
+        # Standard DRF .create() prohibits nested writable serializers, so
+        # we do a trick - first remove properties from validated data, save
+        # parent object, and then save properties separately.
+        validated_data_minus_properties = dict(validated_data)
+
+        properties_field = None
+        for field in validated_data:
+            if self._is_properties_field(field):
+                del validated_data_minus_properties[field]
+                properties_field = field
+
+        instance = super(PropertiesOwnerSerializer, self).create(
+            validated_data_minus_properties)
+
+        # Now save properties separately.
+        self._save_properties(instance, properties_field)
+
+        return instance
+
+    def _is_properties_field(self, field_name):
+        serializer = self.fields[field_name]
+        return isinstance(serializer, ListSerializer) and isinstance(
+            serializer.child, PropertySerializer)
+
+    def update(self, instance, validated_data):
+        for field, value in validated_data.items():
+            if self._is_properties_field(field):
+                self._save_properties(instance, field)
+                continue
+            setattr(instance, field, value)
+
+        instance.save()
+        return instance
+
+    def _save_properties(self, instance, field):
+        serializer = self.fields[field].child
+        for property_data in self.validated_data[field]:
+            property_data[serializer.opts.parent_obj_field] = instance
+            serializer.save(property_data)
