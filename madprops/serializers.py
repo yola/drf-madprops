@@ -171,19 +171,17 @@ class PropertiesOwnerSerializer(ModelSerializer):
         # parent object, and then save properties separately.
         validated_data_minus_properties = dict(validated_data)
 
-        # We can theoretically have more than one properties field.
-        properties_fields = []
+        properties_field = None
         for field in validated_data:
             if self._is_properties_field(field):
                 del validated_data_minus_properties[field]
-                properties_fields.append(field)
+                properties_field = field
 
         instance = super(PropertiesOwnerSerializer, self).create(
             validated_data_minus_properties)
 
         # Now save properties separately.
-        [self._save_properties(instance, field)
-            for field in properties_fields]
+        self._save_properties(instance, properties_field)
 
         return instance
 
@@ -203,7 +201,6 @@ class PropertiesOwnerSerializer(ModelSerializer):
         return instance
 
     def _save_properties(self, instance, field):
-        # Get correct serializer class.
         serializer = self.fields[field].child
         for property_data in self.validated_data[field]:
             property_data[serializer.opts.parent_obj_field] = instance
