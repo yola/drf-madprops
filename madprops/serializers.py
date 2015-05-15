@@ -168,47 +168,46 @@ class PropertiesOwnerSerializer(ModelSerializer):
     """
     def create(self, validated_data):
         # Standard DRF .create() prohibits nested writable serializers, so
-        # we do a trick - first remove propertiesfrom validated data, save
+        # we do a trick - first remove properties from validated data, save
         # parent object, and then save properties separately.
         validated_data_minus_properties = dict(validated_data)
-        properties_field = None
-        for (field, serializer) in validated_data:
-            if isinstance(serializer.child, PropertySerializer):
+
+        # We can theoretically have more than one properties field.
+        properties_fields = []
+        for field in validated_data:
+            serializer = self.fields[field]
+            if self._is_properties_field(field):
                 del validated_data_minus_properties[field]
-                properties_field = field
+                properties_fields.append(field)
 
         instance = super(PropertiesOwnerSerializer, self).create(
             validated_data_minus_properties)
-        self._save_properties(instance, properties_field)
 
-    def update(self, instance, validated_data):
-        for attr, value in validated_data.items():
-            if isinstance(self.fields[attr], ListToDictSerializer):
-                self._save_properties(instance, attr)
-                continue
-            setattr(instance, attr, value)
-        instance.save()
+        # Now save properties separately.
+        [self._save_properties(instance, field)
+            for field in properties_fields]
 
         return instance
 
-    def _save_properties(self, instance, field_name):
-        data_dict = self._data_list_to_dict(self.validated_data[field_name])
+    def _is_properties_field(self, field_name):
+        field = self.fields[field_name]
+        return isinstance(field, ListSerializer) and isinstance(
+            field.child, PropertySerializer)
+
+    def update(self, instance, validated_data):
+        for field, value in validated_data.items():
+            if self._is_properties_field(field):
+                self._save_properties(instance, field)
+                continue
+            setattr(instance, field, value)
+
+        instance.save()
+        return instance
+
+    def _save_properties(self, instance, field):
         # Get correct serializer class.
-        properties_serializer_class = self.fields[field_name].child.__class__
-        # We can't pass parent ID using View callback like we do for edits.
-        # So we pass parent_id directly.
-        serializer = properties_serializer_class(
-            data=data_dict, many=True, context={'parent_id': instance.pk})
-        serializer.is_valid()
-
-        serializer.save()
-
-    def _data_list_to_dict(self, properties_list):
-        """[{'name': <prop_name>, 'value': <prop_value>},...] ->
-        {<prop_name>: <prop_value>,...}
-        """
-        properties_dict = {}
-        for property in properties_list:
-            properties_dict[property['name']] = property['value']
-
-        return properties_dict
+        serializer = self.fields[field].child
+        properties_data = self.validated_data[field]
+        for property_data in self.validated_data[field]:
+            property_data[serializer.opts.parent_obj_field] = instance
+            serializer.save(property_data)

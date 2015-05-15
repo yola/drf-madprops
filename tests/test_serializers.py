@@ -192,22 +192,21 @@ class DeserializePropertiesOwner(TestCase):
         manager_mock.filter = Mock(return_value=filter_mock)
         get_queryset_mock.return_value = Mock(get=Mock(return_value=1))
 
-        user = User(name='username', id=1)
+        self.user = User(name='username', id=1)
 
-        self.serializer = UserSerializerForWrite(user, data={
+        self.serializer = UserSerializerForWrite(self.user, data={
             'name': 'new_username', 'preferences': {
                 'prop1': 'value_new',
                 'prop2': 'value2'}},
             context={'view': Mock(kwargs={'user_id': 1})})
         self.serializer.is_valid()
-
         self.serializer.save()
 
     def test_data_is_validated_correctly(self):
         self.assertEqual(self.serializer.validated_data, {
             'name': 'new_username', 'preferences':
-            [{'name': 'prop1', 'value': 'value_new', 'user': 1},
-             {'name': 'prop2', 'value': 'value2', 'user': 1}]})
+            [{'name': 'prop1', 'value': 'value_new', 'user': self.user},
+             {'name': 'prop2', 'value': 'value2', 'user': self.user}]})
 
     def test_existing_property_is_updated(self):
         self.assertEqual(self.existing_prop_mock.save.call_count, 1)
@@ -216,7 +215,7 @@ class DeserializePropertiesOwner(TestCase):
 
     def test_new_property_is_created(self):
         self.manager_mock.create.assert_called_once_with(
-            name='prop2', value='value2', user=1)
+            name='prop2', value='value2', user=self.user)
 
     def test_owner_is_updated(self):
         self.assertEqual(self.user_save_mock.call_count, 1)
