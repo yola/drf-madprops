@@ -1,7 +1,6 @@
 import json
 
 from django.db.models import ForeignKey
-from rest_framework.utils import model_meta
 from django.utils.functional import cached_property
 from rest_framework.serializers import ListSerializer, ModelSerializer
 
@@ -175,7 +174,6 @@ class PropertiesOwnerSerializer(ModelSerializer):
         # We can theoretically have more than one properties field.
         properties_fields = []
         for field in validated_data:
-            serializer = self.fields[field]
             if self._is_properties_field(field):
                 del validated_data_minus_properties[field]
                 properties_fields.append(field)
@@ -190,9 +188,9 @@ class PropertiesOwnerSerializer(ModelSerializer):
         return instance
 
     def _is_properties_field(self, field_name):
-        field = self.fields[field_name]
-        return isinstance(field, ListSerializer) and isinstance(
-            field.child, PropertySerializer)
+        serializer = self.fields[field_name]
+        return isinstance(serializer, ListSerializer) and isinstance(
+            serializer.child, PropertySerializer)
 
     def update(self, instance, validated_data):
         for field, value in validated_data.items():
@@ -207,7 +205,6 @@ class PropertiesOwnerSerializer(ModelSerializer):
     def _save_properties(self, instance, field):
         # Get correct serializer class.
         serializer = self.fields[field].child
-        properties_data = self.validated_data[field]
         for property_data in self.validated_data[field]:
             property_data[serializer.opts.parent_obj_field] = instance
             serializer.save(property_data)
