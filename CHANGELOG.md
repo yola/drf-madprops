@@ -1,5 +1,8 @@
 # [Changelog](https://github.com/yola/drf-madprops)
 
+## 0.2.2
+* Fixed issues found while integrating with UserService.
+
 ## 0.2.1
 * New version for DRF 3.x
 

@@ -1,9 +1,9 @@
 import json
-import sys
 
 from django.db.models import ForeignKey
 from django.utils.functional import cached_property
-from rest_framework.serializers import ListSerializer, ModelSerializer, BaseSerializer
+from rest_framework.serializers import (BaseSerializer, ListSerializer,
+                                        ModelSerializer)
 
 
 class PropertySerializerOptions(object):
