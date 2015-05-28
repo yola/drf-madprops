@@ -117,8 +117,7 @@ class DeserializeSingleProperty(TestCase):
         self.existing_prop_mock = Mock(name='name', value='value')
 
         filter_mock = Mock()
-        filter_mock.first = Mock(return_value=self.existing_prop_mock)
-        manager_mock.filter = Mock(return_value=filter_mock)
+        manager_mock.filter = Mock(return_value=[self.existing_prop_mock])
 
         get_queryset_mock.return_value = Mock(get=Mock(return_value=1))
 
@@ -150,10 +149,9 @@ class DeserializeMultipleProperties(TestCase):
     def setUp(self, save_mock, manager_mock, get_queryset_mock):
         self.manager_mock = manager_mock
 
-        filter_mock = Mock()
         self.existing_prop_mock = Mock(name='prop1', value='value1')
-        filter_mock.first.side_effect = [self.existing_prop_mock, None]
-        manager_mock.filter = Mock(return_value=filter_mock)
+        manager_mock.filter = Mock(
+            side_effect=[[self.existing_prop_mock], []])
         get_queryset_mock.return_value = Mock(get=Mock(return_value=1))
 
         self.serializer = PreferenceSerializerForWrite(
@@ -186,10 +184,9 @@ class DeserializePropertiesOwner(TestCase):
               get_queryset_mock):
         self.manager_mock = manager_mock
         self.user_save_mock = user_save_mock
-        filter_mock = Mock()
         self.existing_prop_mock = Mock(name='prop1', value='value1')
-        filter_mock.first.side_effect = [self.existing_prop_mock, None]
-        manager_mock.filter = Mock(return_value=filter_mock)
+        manager_mock.filter = Mock(
+            side_effect=[[self.existing_prop_mock], []])
         get_queryset_mock.return_value = Mock(get=Mock(return_value=1))
 
         self.user = User(name='username', id=1)
