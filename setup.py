@@ -12,5 +12,5 @@ setup(
     license='MIT (Expat)',
     url=madprops.__url__,
     packages=['madprops'],
-    install_requires=['django >= 1.5.1, < 1.7', 'djangorestframework > 3.0.0']
+    install_requires=['django >= 1.4.11, < 1.7', 'djangorestframework > 3.0.0']
 )
