@@ -1,7 +1,7 @@
 # [Changelog](https://github.com/yola/drf-madprops)
 
 ## 0.2.2
-* Fixed issues found while integrating with UserService.
+* Fixed wrong write for nested properties case.
 
 ## 0.2.1
 * New version for DRF 3.x

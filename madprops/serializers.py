@@ -56,11 +56,10 @@ class ListToDictSerializer(ListSerializer):
         return super(ListToDictSerializer, self).to_internal_value(data_list)
 
     def save(self):
-        instances = [
+        self.instance = [
             self.child.save(property_data)
             for property_data in self.validated_data
         ]
-        self.instance = instances
         return self.instance
 
 
@@ -101,10 +100,7 @@ class PropertySerializer(ModelSerializer):
         return super(BaseSerializer, cls).__new__(cls, *args, **kwargs)
 
     def __init__(self, *args, **kwargs):
-        # TODO: need to review this in future. Didn't find a better way
-        # to prevent recursion here.
-        if 'called_from_list_serializer' in kwargs:
-            del kwargs['called_from_list_serializer']
+        kwargs.pop('called_from_list_serializer', None)
         super(PropertySerializer, self).__init__(*args, **kwargs)
         self.opts = self._options_class(self.Meta)
         self.Meta.list_serializer_class = ListToDictSerializer
