@@ -1,8 +1,9 @@
 import json
+import sys
 
 from django.db.models import ForeignKey
 from django.utils.functional import cached_property
-from rest_framework.serializers import ListSerializer, ModelSerializer
+from rest_framework.serializers import ListSerializer, ModelSerializer, BaseSerializer
 
 
 class PropertySerializerOptions(object):
@@ -55,10 +56,12 @@ class ListToDictSerializer(ListSerializer):
         return super(ListToDictSerializer, self).to_internal_value(data_list)
 
     def save(self):
-        return [
+        instances = [
             self.child.save(property_data)
             for property_data in self.validated_data
         ]
+        self.instance = instances
+        return self.instance
 
 
 class PropertySerializer(ModelSerializer):
@@ -83,12 +86,25 @@ class PropertySerializer(ModelSerializer):
     }
 
     And an input dictionary of the above structure will be converted to
-    the collection of Property instances
+    the collection of Property instances.
     """
 
     _options_class = PropertySerializerOptions
 
+    def __new__(cls, *args, **kwargs):
+        if (kwargs.pop('many', False) or len(kwargs.get('data', [])) > 1):
+            # TODO: need to review this in future. Didn't find a better way
+            # to prevent recursion here.
+            if not kwargs.get('called_from_list_serializer'):
+                kwargs['called_from_list_serializer'] = 1
+                return cls.many_init(*args, **kwargs)
+        return super(BaseSerializer, cls).__new__(cls, *args, **kwargs)
+
     def __init__(self, *args, **kwargs):
+        # TODO: need to review this in future. Didn't find a better way
+        # to prevent recursion here.
+        if 'called_from_list_serializer' in kwargs:
+            del kwargs['called_from_list_serializer']
         super(PropertySerializer, self).__init__(*args, **kwargs)
         self.opts = self._options_class(self.Meta)
         self.Meta.list_serializer_class = ListToDictSerializer
@@ -114,7 +130,8 @@ class PropertySerializer(ModelSerializer):
 
         # If it already exists - update it's value. Otherwise - create a new
         # property.
-        prop = self.Meta.model.objects.filter(**filters).first()
+        existing_props = self.Meta.model.objects.filter(**filters)
+        prop = existing_props[0] if existing_props else None
 
         if prop_name in self.opts.read_only_props:
             return prop
@@ -125,6 +142,7 @@ class PropertySerializer(ModelSerializer):
         else:
             prop = self.Meta.model.objects.create(**property_data)
 
+        self.instance = prop
         return prop
 
     def to_internal_value(self, data):
@@ -133,7 +151,6 @@ class PropertySerializer(ModelSerializer):
         # Handle JSON fields (value encoded as JSON).
         if data['name'] in self.opts.json_props:
             data['value'] = json.dumps(data['value'])
-
         data = self._add_parent_obj_field(data)
         return super(PropertySerializer, self).to_internal_value(data)
 
@@ -170,7 +187,6 @@ class PropertiesOwnerSerializer(ModelSerializer):
         # we do a trick - first remove properties from validated data, save
         # parent object, and then save properties separately.
         validated_data_minus_properties = dict(validated_data)
-
         properties_field = None
         for field in validated_data:
             if self._is_properties_field(field):
