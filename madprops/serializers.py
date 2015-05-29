@@ -171,6 +171,7 @@ class PropertySerializer(ModelSerializer):
 
 
 class NestedPropertySerializer(PropertySerializer):
+    """Base class for Nested Property class."""
     @property
     def fields(self):
         # We need this to avoid validation of foreign key field in case
