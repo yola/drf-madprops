@@ -179,9 +179,7 @@ class NestedPropertySerializer(PropertySerializer):
         # parent field value is not known on property validation stage, so
         # validation fails.
         fields = super(PropertySerializer, self).fields
-        for (name, value) in dict(fields).items():
-            if name == self.opts.parent_obj_field:
-                del fields[name]
+        fields.pop(self.opts.parent_obj_field, None)
         return fields
 
 
