@@ -174,9 +174,9 @@ class NestedPropertySerializer(PropertySerializer):
     """Base class for Nested Property class."""
     @property
     def fields(self):
-        # We need this to avoid validation of foreign key field in case
-        # properties are created together with properties owner. In this case
-        # parent field value is not known on property validation stage, so
+        # We need this to skip validation of foreign key field if properties
+        # are created together with properties owner. In this case parent
+        # field value is not known on a property validation stage, so
         # validation fails.
         fields = super(PropertySerializer, self).fields
         fields.pop(self.opts.parent_obj_field, None)
