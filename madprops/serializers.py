@@ -170,6 +170,20 @@ class PropertySerializer(ModelSerializer):
         return data
 
 
+class NestedPropertySerializer(PropertySerializer):
+    @property
+    def fields(self):
+        # We need this to avoid validation of foreign key field in case
+        # properties are created together with properties owner. In this case
+        # parent field value is not known on property validation stage, so
+        # validation fails.
+        fields = super(PropertySerializer, self).fields
+        for (name, value) in dict(fields).items():
+            if name == self.opts.parent_obj_field:
+                del fields[name]
+        return fields
+
+
 class PropertiesOwnerSerializer(ModelSerializer):
     """Base class for "parent" serializers.
 
