@@ -1,5 +1,9 @@
 # [Changelog](https://github.com/yola/drf-madprops)
 
+## 0.2.3
+* Introduced NestedPropertySerializer class, which should be used for nested
+  properties case.
+
 ## 0.2.2
 * Fixed wrong write for nested properties case.
 
