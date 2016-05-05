@@ -1,5 +1,8 @@
 # [Changelog](https://github.com/yola/drf-madprops)
 
+## Dev
+* Fix bug when saving properties if no properties were passed to the serializer
+
 ## 0.2.3
 * Introduced NestedPropertySerializer class, which should be used for nested
   properties case.
