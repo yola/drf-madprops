@@ -206,7 +206,8 @@ class PropertiesOwnerSerializer(ModelSerializer):
             validated_data_minus_properties)
 
         # Now save properties separately.
-        self._save_properties(instance, properties_field)
+        if properties_field is not None:
+            self._save_properties(instance, properties_field)
 
         return instance
 

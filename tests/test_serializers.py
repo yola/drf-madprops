@@ -216,3 +216,27 @@ class DeserializePropertiesOwner(TestCase):
 
     def test_owner_is_updated(self):
         self.assertEqual(self.user_save_mock.call_count, 1)
+
+
+class DeserializePropertiesOwnerWhenOptionalPropertiesOmitted(TestCase):
+    @patch.object(PreferenceForWrite, 'objects')
+    @patch.object(PreferenceForWrite, 'save')
+    @patch.object(User, 'save')
+    def setUp(self, user_save_mock, save_mock, manager_mock):
+        self.manager_mock = manager_mock
+        self.user_save_mock = user_save_mock
+
+        self.user = User(name='username', id=1)
+
+        self.serializer = UserSerializerForWrite(self.user, data={
+            'name': 'new_username'},
+            context={'view': Mock(kwargs={'user_id': 1})})
+        self.serializer.is_valid()
+        self.serializer.save()
+
+    def test_data_is_validated_correctly(self):
+        self.assertEqual(self.serializer.validated_data, {
+            'name': 'new_username'})
+
+    def test_no_new_properties_are_created(self):
+        self.assertFalse(self.manager_mock.create.called)
