@@ -1,6 +1,6 @@
 # [Changelog](https://github.com/yola/drf-madprops)
 
-## Dev
+## 0.2.4
 * Fix bug when saving properties if no properties were passed to the serializer
 
 ## 0.2.3
