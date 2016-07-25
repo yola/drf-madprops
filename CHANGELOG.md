@@ -1,5 +1,8 @@
 # [Changelog](https://github.com/yola/drf-madprops)
 
+## Development
+* Add validation of serialized data to ensure dict-ness
+
 ## 0.2.4
 * Fix bug when saving properties if no properties were passed to the serializer
 

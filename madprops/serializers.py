@@ -2,6 +2,8 @@ import json
 
 from django.db.models import ForeignKey
 from django.utils.functional import cached_property
+from django.utils.translation import ugettext as _
+from rest_framework.exceptions import ValidationError
 from rest_framework.serializers import (BaseSerializer, ListSerializer,
                                         ModelSerializer)
 
@@ -52,7 +54,12 @@ class ListToDictSerializer(ListSerializer):
         return result_dict
 
     def to_internal_value(self, data):
-        data_list = [{name: value} for (name, value) in data.items()]
+        try:
+            data_list = [{name: value} for (name, value) in data.items()]
+        except AttributeError:
+            raise ValidationError(
+                _('Properties should be a key value mapping'))
+
         return super(ListToDictSerializer, self).to_internal_value(data_list)
 
     def save(self):
