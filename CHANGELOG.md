@@ -1,6 +1,6 @@
 # [Changelog](https://github.com/yola/drf-madprops)
 
-## Development
+## 0.2.5
 * Add validation of serialized data to ensure dict-ness
 
 ## 0.2.4
