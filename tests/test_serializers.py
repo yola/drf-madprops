@@ -5,6 +5,7 @@ from mock import Mock, patch
 
 from madprops.serializers import PropertiesOwnerSerializer, PropertySerializer
 from rest_framework.serializers import ModelSerializer
+from rest_framework.exceptions import ValidationError
 from unittest2 import TestCase
 
 
@@ -240,3 +241,13 @@ class DeserializePropertiesOwnerWhenOptionalPropertiesOmitted(TestCase):
 
     def test_no_new_properties_are_created(self):
         self.assertFalse(self.manager_mock.create.called)
+
+
+class DeserializePropertiesForNonDictData(TestCase):
+    def setUp(self):
+        self.serializer = PreferenceSerializerForWrite(
+            data=['one', 'two', 'three'])
+
+    def test_raises_validation_error(self):
+        with self.assertRaises(ValidationError):
+            self.serializer.is_valid(raise_exception=True)
