@@ -15,10 +15,16 @@ from unittest2 import TestCase
 class User(models.Model):
     name = models.CharField(null=False, max_length=150)
 
+    class Meta:
+        app_label = 'testapp'
+
 
 class UserPreference(models.Model):
     name = models.CharField(null=False, max_length=150)
     value = models.CharField(null=False, max_length=150)
+
+    class Meta:
+        app_label = 'testapp'
 
 
 class PreferenceSerializer(PropertySerializer):
@@ -31,6 +37,7 @@ class PreferenceSerializer(PropertySerializer):
 class UserSerializer(ModelSerializer):
     class Meta:
         model = User
+        fields = '__all__'
 
     preferences = PreferenceSerializer(many=True, required=False)
 
@@ -39,15 +46,22 @@ class UserSerializer(ModelSerializer):
 class UserForWrite(models.Model):
     name = models.CharField(null=False, max_length=150)
 
+    class Meta:
+        app_label = 'testapp'
+
 
 class PreferenceForWrite(models.Model):
     user = models.ForeignKey(User, related_name='preferences')
     name = models.CharField(null=False, max_length=150)
     value = models.CharField(null=False, max_length=150)
 
+    class Meta:
+        app_label = 'testapp'
+
 
 class PreferenceSerializerForWrite(PropertySerializer):
     class Meta:
+        fields = '__all__'
         model = PreferenceForWrite
         json_props = ('json_prop',)
         read_only_props = ()
@@ -55,6 +69,7 @@ class PreferenceSerializerForWrite(PropertySerializer):
 
 class UserSerializerForWrite(PropertiesOwnerSerializer):
     class Meta:
+        fields = '__all__'
         model = UserForWrite
 
     preferences = PreferenceSerializerForWrite(many=True, required=False)
@@ -116,11 +131,10 @@ class DeserializeSingleProperty(TestCase):
         # This emulates property in the database, which needs to be updated
         # as a result of given test.
         self.existing_prop_mock = Mock(name='name', value='value')
-
-        filter_mock = Mock()
         manager_mock.filter = Mock(return_value=[self.existing_prop_mock])
 
         get_queryset_mock.return_value = Mock(get=Mock(return_value=1))
+        get_queryset_mock.__func__ = get_queryset_mock
 
         self.json_value_new = {1: None}
 
@@ -154,6 +168,7 @@ class DeserializeMultipleProperties(TestCase):
         manager_mock.filter = Mock(
             side_effect=[[self.existing_prop_mock], []])
         get_queryset_mock.return_value = Mock(get=Mock(return_value=1))
+        get_queryset_mock.__func__ = get_queryset_mock
 
         self.serializer = PreferenceSerializerForWrite(
             data={'prop1': 'value_new', 'prop2': 'value2'}, context={
@@ -189,6 +204,7 @@ class DeserializePropertiesOwner(TestCase):
         manager_mock.filter = Mock(
             side_effect=[[self.existing_prop_mock], []])
         get_queryset_mock.return_value = Mock(get=Mock(return_value=1))
+        get_queryset_mock.__func__ = get_queryset_mock
 
         self.user = User(name='username', id=1)
 
