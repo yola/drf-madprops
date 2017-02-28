@@ -1,5 +1,8 @@
 # [Changelog](https://github.com/yola/drf-madprops)
 
+## 0.3.0
+* New version compatible with Django 1.10+
+
 ## 0.2.5
 * Add validation of serialized data to ensure dict-ness
 
