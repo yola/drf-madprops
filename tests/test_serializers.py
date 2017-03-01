@@ -138,12 +138,15 @@ class MockDBMixin(object):
 
         self.manager_mock.filter = self.existing_props_mock
         self.get_queryset_mock.return_value = Mock(get=Mock(return_value=1))
+
+        # This is required because this attribute is used by internals of DRF
+        # to check whether method is overriden or not.
         self.get_queryset_mock.__func__ = self.get_queryset_mock
 
         self.addCleanup(self.manager_mock.stop)
         self.addCleanup(self.save_mock.stop)
         self.addCleanup(self.user_save_mock.stop)
-        self.addCleanup(self.get_queryset_mock)
+        self.addCleanup(self.get_queryset_mock.stop)
 
     @property
     def existing_props_mock(self):
