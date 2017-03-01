@@ -123,21 +123,40 @@ class SerializePropertiesOwner(TestCase):
         self.assertEqual(self.serializer.data, expected_result)
 
 
-class DeserializeSingleProperty(TestCase):
-    @patch('rest_framework.relations.RelatedField.get_queryset')
-    @patch.object(PreferenceForWrite, 'objects')
-    @patch.object(PreferenceForWrite, 'save')
-    def setUp(self, save_mock, manager_mock, get_queryset_mock):
+class MockDBMixin(object):
+    def _mock_db(self):
+        self.get_queryset_mock = patch(
+            'rest_framework.relations.RelatedField.get_queryset').start()
+        self.manager_mock = patch.object(PreferenceForWrite, 'objects').start()
+        self.save_mock = patch.object(PreferenceForWrite, 'save').start()
+        self.user_save_mock = patch.object(User, 'save').start()
+
+        self.manager_mock.filter = self.existing_props_mock
+        self.get_queryset_mock.return_value = Mock(get=Mock(return_value=1))
+        self.get_queryset_mock.__func__ = self.get_queryset_mock
+
+        self.addCleanup(self.manager_mock.stop)
+        self.addCleanup(self.save_mock.stop)
+        self.addCleanup(self.user_save_mock.stop)
+        self.addCleanup(self.get_queryset_mock)
+
+    @property
+    def existing_props_mock(self):
+        return []
+
+
+class DeserializeSingleProperty(TestCase, MockDBMixin):
+    @property
+    def existing_props_mock(self):
+        self.existing_prop_mock = Mock(name='name', value='value')
+        return Mock(return_value=[self.existing_prop_mock])
+
+    def setUp(self):
         # This emulates property in the database, which needs to be updated
         # as a result of given test.
-        self.existing_prop_mock = Mock(name='name', value='value')
-        manager_mock.filter = Mock(return_value=[self.existing_prop_mock])
-
-        get_queryset_mock.return_value = Mock(get=Mock(return_value=1))
-        get_queryset_mock.__func__ = get_queryset_mock
+        self._mock_db()
 
         self.json_value_new = {1: None}
-
         self.serializer = PreferenceSerializerForWrite(
             data={'json_prop': self.json_value_new}, context={
                 'view': Mock(kwargs={'user_id': 1})})
@@ -157,24 +176,20 @@ class DeserializeSingleProperty(TestCase):
             self.existing_prop_mock.value, json.dumps(self.json_value_new))
 
 
-class DeserializeMultipleProperties(TestCase):
-    @patch('rest_framework.relations.RelatedField.get_queryset')
-    @patch.object(PreferenceForWrite, 'objects')
-    @patch.object(PreferenceForWrite, 'save')
-    def setUp(self, save_mock, manager_mock, get_queryset_mock):
-        self.manager_mock = manager_mock
-
-        self.existing_prop_mock = Mock(name='prop1', value='value1')
-        manager_mock.filter = Mock(
-            side_effect=[[self.existing_prop_mock], []])
-        get_queryset_mock.return_value = Mock(get=Mock(return_value=1))
-        get_queryset_mock.__func__ = get_queryset_mock
+class DeserializeMultipleProperties(TestCase, MockDBMixin):
+    def setUp(self):
+        self._mock_db()
 
         self.serializer = PreferenceSerializerForWrite(
             data={'prop1': 'value_new', 'prop2': 'value2'}, context={
                 'view': Mock(kwargs={'user_id': 1})}, many=True)
         self.serializer.is_valid()
         self.serializer.save()
+
+    @property
+    def existing_props_mock(self):
+        self.existing_prop_mock = Mock(name='prop1', value='value1')
+        return Mock(side_effect=[[self.existing_prop_mock], []])
 
     def test_data_is_validated_correctly(self):
         self.assertEqual(self.serializer.validated_data, [
@@ -191,21 +206,9 @@ class DeserializeMultipleProperties(TestCase):
             name='prop2', value='value2', user=1)
 
 
-class DeserializePropertiesOwner(TestCase):
-    @patch('rest_framework.relations.RelatedField.get_queryset')
-    @patch.object(PreferenceForWrite, 'objects')
-    @patch.object(PreferenceForWrite, 'save')
-    @patch.object(User, 'save')
-    def setUp(self, user_save_mock, save_mock, manager_mock,
-              get_queryset_mock):
-        self.manager_mock = manager_mock
-        self.user_save_mock = user_save_mock
-        self.existing_prop_mock = Mock(name='prop1', value='value1')
-        manager_mock.filter = Mock(
-            side_effect=[[self.existing_prop_mock], []])
-        get_queryset_mock.return_value = Mock(get=Mock(return_value=1))
-        get_queryset_mock.__func__ = get_queryset_mock
-
+class DeserializePropertiesOwner(TestCase, MockDBMixin):
+    def setUp(self):
+        self._mock_db()
         self.user = User(name='username', id=1)
 
         self.serializer = UserSerializerForWrite(self.user, data={
@@ -215,6 +218,11 @@ class DeserializePropertiesOwner(TestCase):
             context={'view': Mock(kwargs={'user_id': 1})})
         self.serializer.is_valid()
         self.serializer.save()
+
+    @property
+    def existing_props_mock(self):
+        self.existing_prop_mock = Mock(name='prop1', value='value1')
+        return Mock(side_effect=[[self.existing_prop_mock], []])
 
     def test_data_is_validated_correctly(self):
         self.assertEqual(self.serializer.validated_data, {
@@ -235,14 +243,10 @@ class DeserializePropertiesOwner(TestCase):
         self.assertEqual(self.user_save_mock.call_count, 1)
 
 
-class DeserializePropertiesOwnerWhenOptionalPropertiesOmitted(TestCase):
-    @patch.object(PreferenceForWrite, 'objects')
-    @patch.object(PreferenceForWrite, 'save')
-    @patch.object(User, 'save')
-    def setUp(self, user_save_mock, save_mock, manager_mock):
-        self.manager_mock = manager_mock
-        self.user_save_mock = user_save_mock
-
+class DeserializePropertiesOwnerWhenOptionalPropertiesOmitted(
+        TestCase, MockDBMixin):
+    def setUp(self):
+        self._mock_db()
         self.user = User(name='username', id=1)
 
         self.serializer = UserSerializerForWrite(self.user, data={
