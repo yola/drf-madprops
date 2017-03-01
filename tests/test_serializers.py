@@ -124,6 +124,10 @@ class SerializePropertiesOwner(TestCase):
 
 
 class MockDBMixin(object):
+    """ We mock DB oprations because otherwise we would need DB configured,
+
+    settings.py, and so on."""
+
     def _mock_db(self):
         self.get_queryset_mock = patch(
             'rest_framework.relations.RelatedField.get_queryset').start()
