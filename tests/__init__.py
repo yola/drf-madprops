@@ -3,4 +3,5 @@ from django.conf import settings
 
 
 settings.configure()
-django.setup()
+if hasattr(django, 'setup'):
+    django.setup()

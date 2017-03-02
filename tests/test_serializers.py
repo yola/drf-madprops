@@ -37,7 +37,7 @@ class PreferenceSerializer(PropertySerializer):
 class UserSerializer(ModelSerializer):
     class Meta:
         model = User
-        fields = '__all__'
+        fields = ('id', 'name', 'preferences')
 
     preferences = PreferenceSerializer(many=True, required=False)
 
@@ -61,7 +61,7 @@ class PreferenceForWrite(models.Model):
 
 class PreferenceSerializerForWrite(PropertySerializer):
     class Meta:
-        fields = '__all__'
+        fields = ('user', 'name', 'value')
         model = PreferenceForWrite
         json_props = ('json_prop',)
         read_only_props = ()
@@ -69,7 +69,7 @@ class PreferenceSerializerForWrite(PropertySerializer):
 
 class UserSerializerForWrite(PropertiesOwnerSerializer):
     class Meta:
-        fields = '__all__'
+        fields = ('id', 'name', 'preferences')
         model = UserForWrite
 
     preferences = PreferenceSerializerForWrite(many=True, required=False)
