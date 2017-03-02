@@ -1,6 +1,6 @@
 # [Changelog](https://github.com/yola/drf-madprops)
 
-## 0.3.0
+## 1.0.0
 * New version compatible with Django < 1.12 and DRF < 3.6.0
 
 ## 0.2.5
