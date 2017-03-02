@@ -13,7 +13,7 @@ setup(
     url=madprops.__url__,
     packages=['madprops'],
     install_requires=[
-        'django >= 1.4.11 <= 1.11b1',
-        'djangorestframework >= 3.0.1 <= 3.5.3'
+        'django >= 1.4.11 < 1.12',
+        'djangorestframework >= 3.0.1 < 3.6.0'
     ]
 )
