@@ -1,6 +1,6 @@
 coverage < 4.0.0
-django >= 1.4.11, < 1.7
-djangorestframework > 3.0.0, < 3.3.0
+Django == 1.11b1
+djangorestframework == 3.5.3
 mock < 2.0.0
 nose < 2.0.0
 python-coveralls < 3.0.0
