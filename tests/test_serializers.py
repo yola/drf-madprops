@@ -1,4 +1,5 @@
 import json
+from unittest import TestCase
 
 from django.db import models
 from mock import Mock, patch
@@ -6,7 +7,6 @@ from mock import Mock, patch
 from madprops.serializers import PropertiesOwnerSerializer, PropertySerializer
 from rest_framework.serializers import ModelSerializer
 from rest_framework.exceptions import ValidationError
-from unittest2 import TestCase
 
 
 # Fake models and serializers for them. We have separate models for

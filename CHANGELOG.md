@@ -1,5 +1,8 @@
 # [Changelog](https://github.com/yola/drf-madprops)
 
+## dev
+* Dropped Python 2.6 support
+
 ## 1.0.0
 * New version compatible with Django < 1.12 and DRF < 3.6.0
 
