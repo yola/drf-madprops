@@ -133,8 +133,7 @@ class PropertySerializer(ModelSerializer):
 
         # If it already exists - update it's value. Otherwise - create a new
         # property.
-        existing_props = self.Meta.model.objects.filter(**filters)
-        prop = existing_props[0] if existing_props else None
+        prop = self.Meta.model.objects.filter(**filters).first()
 
         if prop_name in self.opts.read_only_props:
             return prop
@@ -162,7 +161,7 @@ class PropertySerializer(ModelSerializer):
         {<prop_name>: <prop_value>} ->
             {'name': <prop_name>, 'value': <prop_value>}
         """
-        prop_name, prop_value = data.items()[0]
+        prop_name, prop_value = next(iter(data.items()))
         return {'name': prop_name, 'value': prop_value}
 
     def _add_parent_obj_field(self, data):
