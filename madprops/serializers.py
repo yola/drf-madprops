@@ -4,8 +4,11 @@ from django.db.models import ForeignKey
 from django.utils.functional import cached_property
 from django.utils.translation import ugettext as _
 from rest_framework.exceptions import ValidationError
-from rest_framework.serializers import (BaseSerializer, ListSerializer,
-                                        ModelSerializer)
+from rest_framework.serializers import (
+    BaseSerializer,
+    ListSerializer,
+    ModelSerializer,
+)
 
 
 class PropertySerializerOptions(object):

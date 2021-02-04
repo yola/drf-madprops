@@ -4,8 +4,9 @@ from unittest import TestCase
 
 from django.db import connection, models
 from django.test import TestCase as DjangoTestCase
-from madprops.serializers import PropertiesOwnerSerializer, PropertySerializer
 from rest_framework.exceptions import ValidationError
+
+from madprops.serializers import PropertiesOwnerSerializer, PropertySerializer
 
 try:
     from unittest.mock import Mock
