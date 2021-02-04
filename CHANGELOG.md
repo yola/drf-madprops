@@ -1,10 +1,12 @@
 # [Changelog](https://github.com/yola/drf-madprops)
 
-## dev
+## 1.1.0
 * Dropped Python 2.6 support
+* Added Python 3 support
+* The new version is compatible with Django 1.11 - 3.2, DRF 3.5 - 3.12
 
 ## 1.0.0
-* New version compatible with Django < 1.12 and DRF < 3.6.0
+* The new version is compatible with Django < 1.12 and DRF < 3.6.0
 
 ## 0.2.5
 * Add validation of serialized data to ensure dict-ness

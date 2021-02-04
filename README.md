@@ -1,4 +1,4 @@
-# drf-madprops
+# drf-madprops [![Build Status](https://travis-ci.com/yola/drf-madprops.svg?branch=master)](https://travis-ci.com/yola/drf-madprops)
 
 DRF library of helpers to operate on lists of resource properties as dicts
 
@@ -88,13 +88,14 @@ class PreferencePrivateViewSet(ModelViewSet):
 
 ## Testing
 
-Install development requirements:
-
-    pip install -r requirements.txt
-
 Run the tests with:
 
-    nosetests
+    tox
+
+Or install development requirements and run tests with:
+
+    pip install -r requirements.txt
+    pytest tests
 
 
 [1]:https://www.yola.com/

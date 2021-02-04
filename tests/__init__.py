@@ -1,7 +1,12 @@
 import django
 from django.conf import settings
 
-
-settings.configure()
-if hasattr(django, 'setup'):
-    django.setup()
+settings.configure(
+    DATABASES={
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:'
+        }
+    }
+)
+django.setup()
