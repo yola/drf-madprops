@@ -1,5 +1,9 @@
 # [Changelog](https://github.com/yola/drf-madprops)
 
+## 1.2.0
+* Support Django 4.2 and DRF 3.15
+* Remove unnecessary translation of error messages
+
 ## 1.1.0
 * Dropped Python 2.6 support
 * Added Python 3 support

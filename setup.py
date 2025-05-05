@@ -17,8 +17,8 @@ setup(
     url=madprops.__url__,
     packages=['madprops'],
     install_requires=[
-        'django >= 1.11, < 3.3',
-        'djangorestframework >= 3.5, < 3.13'
+        'django >= 1.11, < 5',
+        'djangorestframework >= 3.5, < 4'
     ],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
@@ -31,6 +31,7 @@ setup(
         'Framework :: Django :: 3.0',
         'Framework :: Django :: 3.1',
         'Framework :: Django :: 3.2',
+        'Framework :: Django :: 4.2',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
