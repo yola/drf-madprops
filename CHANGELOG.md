@@ -1,5 +1,8 @@
 # [Changelog](https://github.com/yola/drf-madprops)
 
+## 1.3.0
+* Upgrade to Django 4.2.16 to resolve security issues
+
 ## 1.2.0
 * Support Django 4.2 and DRF 3.15
 * Remove unnecessary translation of error messages
