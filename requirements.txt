@@ -1,4 +1,4 @@
-Django == 4.2.16
+Django == 4.2.24
 djangorestframework == 3.15.2
 mock == 3.0.5
 pytest == 4.6.11
