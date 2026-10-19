@@ -1,17 +1,13 @@
 import json
 import operator
 from unittest import TestCase
+from unittest.mock import Mock
 
 from django.db import connection, models
 from django.test import TestCase as DjangoTestCase
 from rest_framework.exceptions import ValidationError
 
 from madprops.serializers import PropertiesOwnerSerializer, PropertySerializer
-
-try:
-    from unittest.mock import Mock
-except ImportError:
-    from mock import Mock
 
 
 class User(models.Model):
